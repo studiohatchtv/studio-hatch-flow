@@ -111,6 +111,13 @@
   .stat .l { font-size: 12px; color: var(--text-2); }
   .stat.danger .n { color: #c0392b; }
   @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .notif { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 16px; }
+  .notif-h { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+  .notif-row { display: flex; align-items: center; gap: 8px; padding: 7px 4px; cursor: pointer; border-radius: 6px; }
+  .notif-row:hover { background: var(--surface-2); }
+  .notif-row .dot2 { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .nr-title { font-size: 13px; flex: 1; }
+  .nr-meta { font-size: 12px; color: var(--text-3); white-space: nowrap; }
 
   .col { background: rgba(0,0,0,0.025); border-radius: var(--radius); padding: 8px; min-height: 120px; }
   .col-head { display: flex; align-items: center; justify-content: space-between;
@@ -222,6 +229,7 @@
     <button class="vt" id="vtMine" onclick="setView('mine')">Görevlerim</button>
     <button class="vt active" id="vtKanban" onclick="setView('kanban')">Kanban</button>
     <button class="vt" id="vtList" onclick="setView('list')">Liste</button>
+    <button class="vt" id="vtArchive" onclick="setView('archive')">Arşiv</button>
   </div>
   <select id="personFilter" onchange="render()"><option value="">Herkes</option></select>
   <button class="btn" onclick="exportExcel()"><span style="font-size:14px">⬇</span> Excel'e aktar</button>
@@ -290,6 +298,7 @@ const LINES = {
   "hatch Shop":  { bg:"#E1F5EE", fg:"#0F6E56", av:"#1D9E75" },
   "İnşaat":      { bg:"#FAECE7", fg:"#993C1D", av:"#D85A30" },
   "Sponsorluk":  { bg:"#EEEDFE", fg:"#534AB7", av:"#7F77DD" },
+  "Dijital İşler": { bg:"#FAEEDA", fg:"#854F0B", av:"#EF9F27" },
 };
 const STATUSES = ["Yapılacak", "Devam ediyor", "Tamamlandı"];
 
@@ -332,7 +341,7 @@ sb.auth.onAuthStateChange((event) => {
 function rowToTask(r){
   return { id:r.id, title:r.baslik||"", desc:r.aciklama||"", line:r.is_kolu||"", status:r.durum||"Yapılacak",
     manager:r.yonetici||"", owner:r.ana_sorumlu||"", helper:r.yardimci_sorumlu||"",
-    start:r.ilk_tarih||"", end:r.son_tarih||"" };
+    start:r.ilk_tarih||"", end:r.son_tarih||"", updatedAt:r.updated_at||"" };
 }
 function taskToRow(d){
   return { baslik:d.title, aciklama:d.desc||null, is_kolu:d.line, durum:d.status,
@@ -379,9 +388,16 @@ function refreshPeople(){
   sel.innerHTML=`<option value="">Herkes</option>`+ppl.map(p=>`<option>${escapeHtml(p)}</option>`).join("");
   sel.value=cur;
 }
+const ARCHIVE_DAYS = 7;
+function isArchived(t){
+  if(t.status!=="Tamamlandı" || !t.updatedAt) return false;
+  return (Date.now() - new Date(t.updatedAt).getTime()) > ARCHIVE_DAYS*24*60*60*1000;
+}
+function activeTasks(){ return tasks.filter(t=>!isArchived(t)); }
+
 function visibleTasks(){
   const person=document.getElementById("personFilter").value;
-  let v=tasks.filter(t=>(!activeLine||t.line===activeLine));
+  let v=activeTasks().filter(t=>(!activeLine||t.line===activeLine));
   if(person) v=v.filter(t=>[t.manager,t.owner,t.helper].includes(person));
   return v;
 }
@@ -389,6 +405,7 @@ function render(){
   const board=document.getElementById("board");
   const visible=visibleTasks();
   if(viewMode==="mine"){ board.className=""; renderMine(board); return; }
+  if(viewMode==="archive"){ board.className=""; renderArchive(board); return; }
   if(viewMode==="list"){ board.className=""; renderList(board,visible); return; }
   board.className="board";
   board.innerHTML=STATUSES.map(st=>{
@@ -414,15 +431,36 @@ function listTableHtml(items){
 }
 function renderList(board,visible){ board.innerHTML=`<div class="listwrap">${listTableHtml(visible)}</div>`; }
 
+function notifRow(t, kind){
+  const L=LINES[t.line]||{av:"#999"};
+  const tag = kind==="overdue"
+    ? `<span style="color:#c0392b;font-weight:600;">Gecikti</span>`
+    : `<span style="color:#854F0B;">Yaklaşıyor</span>`;
+  return `<div class="notif-row" onclick="openEdit('${t.id}')">
+    <span class="dot2" style="background:${L.av}"></span>
+    <span class="nr-title">${escapeHtml(t.title)}</span>
+    <span class="nr-meta">${tag}${t.end?" · "+fmtFull(t.end):""}</span></div>`;
+}
 function renderMine(board){
-  let mine = tasks.filter(t => myName && [t.manager,t.owner,t.helper].includes(myName));
+  let mine = activeTasks().filter(t => myName && [t.manager,t.owner,t.helper].includes(myName));
   if(activeLine) mine = mine.filter(t=>t.line===activeLine);
   const yap=mine.filter(t=>t.status==="Yapılacak").length;
   const dev=mine.filter(t=>t.status==="Devam ediyor").length;
-  const done=mine.filter(t=>t.status==="Tamamlandı").length;
   const gec=mine.filter(t=>isOverdue(t.end,t.status)).length;
+  const gecikenler=mine.filter(t=>isOverdue(t.end,t.status));
+  const yakin=mine.filter(t=>{
+    if(!t.end || t.status==="Tamamlandı" || isOverdue(t.end,t.status)) return false;
+    return (new Date(t.end+"T23:59:59").getTime() - Date.now()) <= 7*24*60*60*1000;
+  });
+  let notif="";
+  if(gecikenler.length || yakin.length){
+    notif=`<div class="notif"><div class="notif-h">📌 Dikkat — senin için</div>
+      ${gecikenler.map(t=>notifRow(t,"overdue")).join("")}
+      ${yakin.map(t=>notifRow(t,"soon")).join("")}</div>`;
+  }
   board.innerHTML=`<div class="listwrap">
     <div style="font-size:15px; font-weight:600; margin-bottom:12px;">Görevlerim <span style="color:var(--text-3); font-weight:400;">· ${escapeHtml(myName)}</span></div>
+    ${notif}
     <div class="stats">
       <div class="stat"><span class="n">${mine.length}</span><span class="l">Toplam</span></div>
       <div class="stat"><span class="n">${yap}</span><span class="l">Yapılacak</span></div>
@@ -432,10 +470,21 @@ function renderMine(board){
     ${listTableHtml(mine)}
   </div>`;
 }
+function renderArchive(board){
+  let arch = tasks.filter(isArchived);
+  if(activeLine) arch = arch.filter(t=>t.line===activeLine);
+  arch.sort((a,b)=> new Date(b.updatedAt) - new Date(a.updatedAt));
+  board.innerHTML=`<div class="listwrap">
+    <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Arşiv</div>
+    <div style="font-size:12px; color:var(--text-3); margin-bottom:12px;">Tamamlanıp 1 haftadan eski işler burada saklanır; kalabalık yapmasın diye normal görünümlerde gizlenir. İçeri tıklayıp durumunu değiştirirsen tekrar listeye döner.</div>
+    ${listTableHtml(arch)}
+  </div>`;
+}
 function setView(m){ viewMode=m;
   document.getElementById("vtMine").classList.toggle("active",m==="mine");
   document.getElementById("vtKanban").classList.toggle("active",m==="kanban");
   document.getElementById("vtList").classList.toggle("active",m==="list");
+  document.getElementById("vtArchive").classList.toggle("active",m==="archive");
   render(); }
 function cardHtml(t){
   const L=LINES[t.line]||{bg:"#eee",fg:"#555",av:"#999"};
