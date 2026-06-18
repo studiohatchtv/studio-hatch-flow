@@ -437,6 +437,17 @@ function isArchived(t){
   return (Date.now() - new Date(t.updatedAt).getTime()) > ARCHIVE_DAYS*24*60*60*1000;
 }
 function activeTasks(){ return tasks.filter(t=>!isArchived(t)); }
+// önce acil, sonra son tarihi en yakın (tarihsizler en sonda)
+function sortTasks(arr){
+  return arr.slice().sort((a,b)=>{
+    if(!!b.urgent !== !!a.urgent) return (b.urgent?1:0)-(a.urgent?1:0);
+    const ae=a.end||"", be=b.end||"";
+    if(ae && be) return ae<be?-1:ae>be?1:0;
+    if(ae && !be) return -1;
+    if(!ae && be) return 1;
+    return 0;
+  });
+}
 
 function visibleTasks(){
   const person=document.getElementById("personFilter").value;
@@ -452,7 +463,7 @@ function render(){
   if(viewMode==="list"){ board.className=""; renderList(board,visible); return; }
   board.className="board";
   board.innerHTML=STATUSES.map(st=>{
-    const items=visible.filter(t=>t.status===st);
+    const items=sortTasks(visible.filter(t=>t.status===st));
     const cards=items.map(cardHtml).join("")||`<div class="empty-col">— boş —</div>`;
     return `<div class="col" data-status="${st}" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,'${st}')">
       <div class="col-head"><span>${st}</span><span class="count">${items.length}</span></div>${cards}</div>`;
@@ -472,7 +483,7 @@ function listTableHtml(items){
     <th>Başlık</th><th>İş kolu</th><th>Durum</th><th>Yönetici</th><th>Ana sorumlu</th><th>Yardımcı</th><th>İlk tarih</th><th>Son tarih</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
 }
-function renderList(board,visible){ board.innerHTML=`<div class="listwrap">${listTableHtml(visible)}</div>`; }
+function renderList(board,visible){ board.innerHTML=`<div class="listwrap">${listTableHtml(sortTasks(visible))}</div>`; }
 
 function notifRow(t, kind){
   const L=LINES[t.line]||{av:"#999"};
@@ -514,7 +525,7 @@ function renderMine(board){
       <div class="stat"><span class="n">${dev}</span><span class="l">Devam ediyor</span></div>
       <div class="stat${gec?' danger':''}"><span class="n">${gec}</span><span class="l">Geciken</span></div>
     </div>
-    ${listTableHtml(mine)}
+    ${listTableHtml(sortTasks(mine))}
   </div>`;
 }
 function renderArchive(board){
