@@ -13,11 +13,22 @@ create table if not exists public.kisiler (
   created_at  timestamptz not null default now()
 );
 
+create table if not exists public.kontaklar (
+  id          uuid primary key default gen_random_uuid(),
+  ad          text not null,
+  firma       text,
+  telefon     text,
+  email       text,
+  notlar      text,
+  created_at  timestamptz not null default now()
+);
+
 create table if not exists public.isler (
   id               uuid primary key default gen_random_uuid(),
   baslik           text not null,
   aciklama         text,
   acil             boolean not null default false,
+  kontak_id        uuid references public.kontaklar(id) on delete set null,
   is_kolu          text,
   durum            text not null default 'Yapılacak',
   yonetici         text,
@@ -33,6 +44,7 @@ create table if not exists public.isler (
 -- daha önce eksik kurulmuşsa kolonları garantiye al
 alter table public.isler add column if not exists aciklama text;
 alter table public.isler add column if not exists acil boolean not null default false;
+alter table public.isler add column if not exists kontak_id uuid references public.kontaklar(id) on delete set null;
 
 -- 2) updated_at otomatik ------------------------------------
 create or replace function public.touch_updated_at()
@@ -67,8 +79,9 @@ create trigger trg_new_user after insert on auth.users
   for each row execute function public.handle_new_user();
 
 -- 4) Güvenlik (RLS): sadece giriş yapmış ekip ---------------
-alter table public.kisiler enable row level security;
-alter table public.isler   enable row level security;
+alter table public.kisiler   enable row level security;
+alter table public.isler     enable row level security;
+alter table public.kontaklar enable row level security;
 
 drop policy if exists kisiler_all on public.kisiler;
 create policy kisiler_all on public.kisiler
@@ -76,6 +89,10 @@ create policy kisiler_all on public.kisiler
 
 drop policy if exists isler_all on public.isler;
 create policy isler_all on public.isler
+  for all to authenticated using (true) with check (true);
+
+drop policy if exists kontaklar_all on public.kontaklar;
+create policy kontaklar_all on public.kontaklar
   for all to authenticated using (true) with check (true);
 
 -- 5) Anlık senkron (zaten ekliyse atla) ---------------------
@@ -88,6 +105,10 @@ begin
   if not exists (select 1 from pg_publication_tables
                  where pubname='supabase_realtime' and schemaname='public' and tablename='kisiler') then
     alter publication supabase_realtime add table public.kisiler;
+  end if;
+  if not exists (select 1 from pg_publication_tables
+                 where pubname='supabase_realtime' and schemaname='public' and tablename='kontaklar') then
+    alter publication supabase_realtime add table public.kontaklar;
   end if;
 end $$;
 

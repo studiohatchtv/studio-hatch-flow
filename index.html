@@ -158,6 +158,7 @@
   .card .tag { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 999px; margin-bottom: 7px; font-weight: 500; }
   .card .title { font-size: 13.5px; line-height: 1.4; }
   .card .title.done { text-decoration: line-through; color: var(--text-3); }
+  .card-contact { font-size: 11px; color: var(--text-3); margin-top: 6px; }
   .card .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
   .avatars { display: flex; }
   .avatar { width: 23px; height: 23px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -241,6 +242,7 @@
   </div>
   <div style="display:flex; gap:8px; align-items:center;">
     <div class="me"><span class="name" id="meName"></span><button class="out" onclick="signOut()">çıkış</button></div>
+    <button class="btn" onclick="openContacts()"><span style="font-size:15px">📇</span> Kontaklar</button>
     <button class="btn" onclick="openPeople()"><span style="font-size:15px">👥</span> Kişiler</button>
     <button class="btn btn-primary" onclick="openNew()">+ Yeni iş</button>
   </div>
@@ -283,6 +285,11 @@
         <div class="field"><label>Ana sorumlu</label><select id="f_owner"></select></div>
         <div class="field"><label>Yardımcı sorumlu</label><select id="f_helper"></select></div>
       </div>
+      <div class="field">
+        <label>İlgili tedarikçi / kontak</label>
+        <select id="f_kontak" onchange="onKontakChange()"></select>
+        <div id="kontakHint" style="font-size:12px; color:var(--text-3); margin-top:5px;"></div>
+      </div>
       <div class="row2">
         <div class="field"><label>İlk tarih</label><input id="f_start" type="date"></div>
         <div class="field"><label>Son tarih</label><input id="f_end" type="date"></div>
@@ -314,6 +321,30 @@
   </div>
 </div>
 
+<!-- Contacts modal -->
+<div class="overlay" id="contactsOverlay">
+  <div class="modal" style="max-width: 460px;">
+    <div class="modal-head"><h2 id="contactsTitle">Kontaklar</h2><button class="icon-btn" onclick="closeContacts()">&times;</button></div>
+    <div class="modal-body">
+      <div class="row2">
+        <div class="field"><label>Ad / kişi</label><input id="c_ad" placeholder="ör. Mehmet Demir"></div>
+        <div class="field"><label>Firma</label><input id="c_firma" placeholder="ör. ABC Işık"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Telefon</label><input id="c_tel" placeholder="05xx ..."></div>
+        <div class="field"><label>E-posta</label><input id="c_email"></div>
+      </div>
+      <div class="field"><label>Not</label><input id="c_not" placeholder="ör. ışık tedarikçisi"></div>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-bottom:14px;">
+        <button class="btn" id="cCancelEdit" onclick="resetContactForm()" style="display:none;">Vazgeç</button>
+        <button class="btn btn-primary" id="cSaveBtn" onclick="saveContact()">Ekle</button>
+      </div>
+      <div id="contactsList"></div>
+    </div>
+    <div class="modal-foot" style="justify-content:flex-end;"><button class="btn" onclick="closeContacts()">Kapat</button></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://uolmzykwvizhmycgymfi.supabase.co";
@@ -334,6 +365,8 @@ const STATUSES = ["Yapılacak", "Devam ediyor", "Tamamlandı"];
 
 let tasks = [];
 let peopleRows = [];          // {id, ad, user_id}
+let contacts = [];            // {id, ad, firma, telefon, email, notlar}
+let editingContactId = null;
 let activeLine = "";
 let viewMode = "kanban";
 let editingId = null;
@@ -363,7 +396,7 @@ async function boot() {
   document.getElementById("meName").textContent = myName;
   document.body.classList.add("authed");
   buildChips();
-  await Promise.all([loadPeople(), loadTasks()]);
+  await Promise.all([loadPeople(), loadContacts(), loadTasks()]);
   subscribe();
 }
 sb.auth.onAuthStateChange((event) => {
@@ -374,12 +407,12 @@ sb.auth.onAuthStateChange((event) => {
 function rowToTask(r){
   return { id:r.id, title:r.baslik||"", desc:r.aciklama||"", line:r.is_kolu||"", status:r.durum||"Yapılacak",
     manager:r.yonetici||"", owner:r.ana_sorumlu||"", helper:r.yardimci_sorumlu||"",
-    start:r.ilk_tarih||"", end:r.son_tarih||"", urgent:!!r.acil, updatedAt:r.updated_at||"", createdBy:r.created_by||"" };
+    start:r.ilk_tarih||"", end:r.son_tarih||"", urgent:!!r.acil, kontakId:r.kontak_id||"", updatedAt:r.updated_at||"", createdBy:r.created_by||"" };
 }
 function taskToRow(d){
   return { baslik:d.title, aciklama:d.desc||null, acil:!!d.urgent, is_kolu:d.line, durum:d.status,
     yonetici:d.manager||null, ana_sorumlu:d.owner||null, yardimci_sorumlu:d.helper||null,
-    ilk_tarih:d.start||null, son_tarih:d.end||null };
+    ilk_tarih:d.start||null, son_tarih:d.end||null, kontak_id:d.kontakId||null };
 }
 async function loadTasks(){
   const { data, error } = await sb.from("isler").select("*").order("created_at", { ascending: true });
@@ -414,10 +447,19 @@ async function loadPeople(){
   peopleRows = data || [];
   refreshPeople();
 }
+async function loadContacts(){
+  const { data, error } = await sb.from("kontaklar").select("*").order("ad", { ascending: true });
+  if (error) { console.error("kontaklar:", error.message); contacts=[]; return; }
+  contacts = data || [];
+}
+function contactById(id){ return contacts.find(c=>c.id===id); }
+function contactLabel(c){ return c.firma ? c.ad+" — "+c.firma : c.ad; }
+function contactName(id){ const c=contactById(id); return c ? contactLabel(c) : ""; }
 function subscribe(){
   sb.channel("flow")
     .on("postgres_changes", { event:"*", schema:"public", table:"isler" }, loadTasks)
     .on("postgres_changes", { event:"*", schema:"public", table:"kisiler" }, loadPeople)
+    .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, loadContacts)
     .subscribe();
 }
 
@@ -611,6 +653,7 @@ function cardHtml(t){
   return `<div class="card${t.urgent?' urgent':''}" draggable="true" data-id="${t.id}" ondragstart="onDragStart(event,'${t.id}')" ondragend="onDragEnd(event)" onclick="openEdit('${t.id}')">
     <span class="tag" style="background:${L.bg};color:${L.fg}">${t.line}</span>${t.urgent?'<span class="urg">⚠ Acil</span>':''}
     <div class="title ${t.status==='Tamamlandı'?'done':''}">${escapeHtml(t.title)}</div>
+    ${t.kontakId?`<div class="card-contact">🤝 ${escapeHtml(contactName(t.kontakId))}</div>`:''}
     <div class="meta"><div class="avatars">${avatars||""}</div>${due}</div></div>`;
 }
 
@@ -635,6 +678,12 @@ function fillSelects(){
   document.getElementById("f_status").innerHTML=STATUSES.map(s=>`<option>${s}</option>`).join("");
   const opts=`<option value="">— seç —</option>`+peopleNames().map(p=>`<option>${escapeHtml(p)}</option>`).join("");
   ["f_manager","f_owner","f_helper"].forEach(id=>document.getElementById(id).innerHTML=opts);
+  document.getElementById("f_kontak").innerHTML=`<option value="">— yok —</option>`+
+    contacts.slice().sort((a,b)=>a.ad.localeCompare(b.ad,"tr")).map(c=>`<option value="${c.id}">${escapeHtml(contactLabel(c))}</option>`).join("");
+}
+function onKontakChange(){
+  const c=contactById(document.getElementById("f_kontak").value);
+  document.getElementById("kontakHint").textContent = c ? [c.firma,c.telefon,c.email].filter(Boolean).join(" · ") : "";
 }
 function toggleUrgent(){ editingUrgent=!editingUrgent; updateUrgentBtn(); }
 function updateUrgentBtn(){
@@ -652,6 +701,7 @@ function openNew(){
   document.getElementById("doneBtn").style.display="none"; fillSelects();
   set("f_title",""); set("f_desc",""); set("f_line",activeLine||"Immersive"); set("f_status","Yapılacak");
   set("f_manager",""); set("f_owner",""); set("f_helper",""); set("f_start",""); set("f_end","");
+  set("f_kontak",""); onKontakChange();
   editingUrgent=false; updateUrgentBtn();
   showModal();
 }
@@ -664,6 +714,7 @@ function openEdit(id){
   set("f_title",t.title); set("f_desc",t.desc); set("f_line",t.line); set("f_status",t.status);
   set("f_manager",t.manager); set("f_owner",t.owner); set("f_helper",t.helper);
   set("f_start",t.start); set("f_end",t.end);
+  set("f_kontak",t.kontakId); onKontakChange();
   editingUrgent=!!t.urgent; updateUrgentBtn();
   showModal();
 }
@@ -675,7 +726,7 @@ function closeModal(){ document.getElementById("overlay").classList.remove("show
 async function saveTask(){
   const title=get("f_title"); if(!title){ document.getElementById("f_title").focus(); return; }
   const data={ title, desc:get("f_desc"), urgent:editingUrgent, line:get("f_line"), status:get("f_status"), manager:get("f_manager"),
-    owner:get("f_owner"), helper:get("f_helper"), start:get("f_start"), end:get("f_end") };
+    owner:get("f_owner"), helper:get("f_helper"), start:get("f_start"), end:get("f_end"), kontakId:get("f_kontak") };
   const btn=document.getElementById("saveBtn"); btn.disabled=true;
   let error;
   if(editingId){ ({ error } = await sb.from("isler").update(taskToRow(data)).eq("id", editingId)); }
@@ -718,9 +769,59 @@ async function removePerson(id){
   await loadPeople(); renderPeopleList();
 }
 
+/* contacts */
+function openContacts(){ resetContactForm(); renderContactsList(); document.getElementById("contactsOverlay").classList.add("show"); setTimeout(()=>document.getElementById("c_ad").focus(),50); }
+function closeContacts(){ document.getElementById("contactsOverlay").classList.remove("show"); }
+function resetContactForm(){
+  editingContactId=null;
+  ["c_ad","c_firma","c_tel","c_email","c_not"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("cSaveBtn").textContent="Ekle";
+  document.getElementById("cCancelEdit").style.display="none";
+}
+function renderContactsList(){
+  const el=document.getElementById("contactsList");
+  if(!contacts.length){ el.innerHTML=`<div style="color:var(--text-3); font-size:13px; padding:8px 0;">Henüz kontak yok.</div>`; return; }
+  el.innerHTML=contacts.slice().sort((a,b)=>a.ad.localeCompare(b.ad,"tr")).map(c=>`
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 4px; border-bottom:1px solid var(--border); gap:8px;">
+      <div style="min-width:0;">
+        <div style="font-size:14px;">${escapeHtml(c.ad)}${c.firma?` <span style="color:var(--text-3); font-size:12px;">· ${escapeHtml(c.firma)}</span>`:""}</div>
+        <div style="font-size:12px; color:var(--text-3);">${[c.telefon,c.email,c.notlar].filter(Boolean).map(escapeHtml).join(" · ")}</div>
+      </div>
+      <div style="white-space:nowrap;">
+        <button class="icon-btn" title="Düzenle" style="font-size:15px;" onclick="editContact('${c.id}')">✎</button>
+        <button class="icon-btn" title="Sil" onclick="deleteContact('${c.id}')">&times;</button>
+      </div>
+    </div>`).join("");
+}
+function editContact(id){
+  const c=contactById(id); if(!c) return;
+  editingContactId=id;
+  set("c_ad",c.ad); set("c_firma",c.firma); set("c_tel",c.telefon); set("c_email",c.email); set("c_not",c.notlar);
+  document.getElementById("cSaveBtn").textContent="Kaydet";
+  document.getElementById("cCancelEdit").style.display="inline-flex";
+  document.getElementById("c_ad").focus();
+}
+async function saveContact(){
+  const ad=get("c_ad"); if(!ad){ document.getElementById("c_ad").focus(); return; }
+  const data={ ad, firma:get("c_firma")||null, telefon:get("c_tel")||null, email:get("c_email")||null, notlar:get("c_not")||null };
+  let error;
+  if(editingContactId){ ({error}=await sb.from("kontaklar").update(data).eq("id",editingContactId)); }
+  else { ({error}=await sb.from("kontaklar").insert(data)); }
+  if(error){ alert("Kaydedilemedi: "+error.message); return; }
+  resetContactForm(); await loadContacts(); renderContactsList(); render();
+}
+async function deleteContact(id){
+  const c=contactById(id); if(!c) return;
+  if(!confirm(`"${c.ad}" kontağı silinsin mi? (İşlerdeki bağlantısı kaldırılır.)`)) return;
+  const { error } = await sb.from("kontaklar").delete().eq("id",id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  await loadContacts(); renderContactsList(); render();
+}
+
 document.getElementById("overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
 document.getElementById("peopleOverlay").addEventListener("click", e=>{ if(e.target.id==="peopleOverlay") closePeople(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); } });
+document.getElementById("contactsOverlay").addEventListener("click", e=>{ if(e.target.id==="contactsOverlay") closeContacts(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); } });
 
 boot();
 </script>
