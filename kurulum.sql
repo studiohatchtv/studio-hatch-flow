@@ -23,6 +23,15 @@ create table if not exists public.kontaklar (
   created_at  timestamptz not null default now()
 );
 
+create table if not exists public.push_subscriptions (
+  endpoint   text primary key,
+  user_id    uuid references auth.users(id) on delete cascade,
+  ad         text,
+  p256dh     text not null,
+  auth       text not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.isler (
   id               uuid primary key default gen_random_uuid(),
   baslik           text not null,
@@ -93,6 +102,11 @@ create policy isler_all on public.isler
 
 drop policy if exists kontaklar_all on public.kontaklar;
 create policy kontaklar_all on public.kontaklar
+  for all to authenticated using (true) with check (true);
+
+alter table public.push_subscriptions enable row level security;
+drop policy if exists push_all on public.push_subscriptions;
+create policy push_all on public.push_subscriptions
   for all to authenticated using (true) with check (true);
 
 -- 5) Anlık senkron (zaten ekliyse atla) ---------------------
