@@ -105,6 +105,12 @@
   table.list .st { font-size: 12px; color: var(--text-2); }
   .list-empty { padding: 30px; text-align: center; color: var(--text-3); font-size: 13px; }
   .td-overdue { color: #c0392b; font-weight: 600; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--surface-2); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; }
+  .stat .n { font-size: 24px; font-weight: 600; line-height: 1.1; }
+  .stat .l { font-size: 12px; color: var(--text-2); }
+  .stat.danger .n { color: #c0392b; }
+  @media (max-width: 760px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
   .col { background: rgba(0,0,0,0.025); border-radius: var(--radius); padding: 8px; min-height: 120px; }
   .col-head { display: flex; align-items: center; justify-content: space-between;
@@ -213,6 +219,7 @@
   <div class="chips" id="lineChips"></div>
   <div class="spacer"></div>
   <div class="viewtoggle">
+    <button class="vt" id="vtMine" onclick="setView('mine')">Görevlerim</button>
     <button class="vt active" id="vtKanban" onclick="setView('kanban')">Kanban</button>
     <button class="vt" id="vtList" onclick="setView('list')">Liste</button>
   </div>
@@ -291,6 +298,7 @@ let activeLine = "";
 let viewMode = "kanban";
 let editingId = null;
 let me = null;
+let myName = "";
 
 /* ---------- AUTH ---------- */
 async function signIn() {
@@ -308,8 +316,8 @@ async function boot() {
   document.getElementById("boot").style.display = "none";
   if (!session) { document.getElementById("login").style.display = "flex"; return; }
   me = session.user;
-  const nm = me.user_metadata?.full_name || me.user_metadata?.name || me.email;
-  document.getElementById("meName").textContent = nm;
+  myName = me.user_metadata?.full_name || me.user_metadata?.name || me.email;
+  document.getElementById("meName").textContent = myName;
   document.body.classList.add("authed");
   buildChips();
   await Promise.all([loadPeople(), loadTasks()]);
@@ -379,6 +387,7 @@ function visibleTasks(){
 function render(){
   const board=document.getElementById("board");
   const visible=visibleTasks();
+  if(viewMode==="mine"){ board.className=""; renderMine(board); return; }
   if(viewMode==="list"){ board.className=""; renderList(board,visible); return; }
   board.className="board";
   board.innerHTML=STATUSES.map(st=>{
@@ -388,9 +397,9 @@ function render(){
       <div class="col-head"><span>${st}</span><span class="count">${items.length}</span></div>${cards}</div>`;
   }).join("");
 }
-function renderList(board,visible){
-  if(!visible.length){ board.innerHTML=`<div class="listwrap"><div class="list-empty">— gösterilecek iş yok —</div></div>`; return; }
-  const rows=visible.map(t=>{
+function listTableHtml(items){
+  if(!items.length) return `<div class="list-empty">— gösterilecek iş yok —</div>`;
+  const rows=items.map(t=>{
     const L=LINES[t.line]||{bg:"#eee",fg:"#555"}; const overdue=isOverdue(t.end,t.status);
     return `<tr onclick="openEdit('${t.id}')"><td>${escapeHtml(t.title)}</td>
       <td><span class="pill" style="background:${L.bg};color:${L.fg}">${t.line}</span></td>
@@ -398,11 +407,35 @@ function renderList(board,visible){
       <td>${escapeHtml(t.owner)||"—"}</td><td>${escapeHtml(t.helper)||"—"}</td>
       <td>${t.start?fmtFull(t.start):"—"}</td><td class="${overdue?'td-overdue':''}">${t.end?fmtFull(t.end):"—"}</td></tr>`;
   }).join("");
-  board.innerHTML=`<div class="listwrap"><table class="list"><thead><tr>
+  return `<table class="list"><thead><tr>
     <th>Başlık</th><th>İş kolu</th><th>Durum</th><th>Yönetici</th><th>Ana sorumlu</th><th>Yardımcı</th><th>İlk tarih</th><th>Son tarih</th>
-    </tr></thead><tbody>${rows}</tbody></table></div>`;
+    </tr></thead><tbody>${rows}</tbody></table>`;
 }
-function setView(m){ viewMode=m; document.getElementById("vtKanban").classList.toggle("active",m==="kanban"); document.getElementById("vtList").classList.toggle("active",m==="list"); render(); }
+function renderList(board,visible){ board.innerHTML=`<div class="listwrap">${listTableHtml(visible)}</div>`; }
+
+function renderMine(board){
+  let mine = tasks.filter(t => myName && [t.manager,t.owner,t.helper].includes(myName));
+  if(activeLine) mine = mine.filter(t=>t.line===activeLine);
+  const yap=mine.filter(t=>t.status==="Yapılacak").length;
+  const dev=mine.filter(t=>t.status==="Devam ediyor").length;
+  const done=mine.filter(t=>t.status==="Tamamlandı").length;
+  const gec=mine.filter(t=>isOverdue(t.end,t.status)).length;
+  board.innerHTML=`<div class="listwrap">
+    <div style="font-size:15px; font-weight:600; margin-bottom:12px;">Görevlerim <span style="color:var(--text-3); font-weight:400;">· ${escapeHtml(myName)}</span></div>
+    <div class="stats">
+      <div class="stat"><span class="n">${mine.length}</span><span class="l">Toplam</span></div>
+      <div class="stat"><span class="n">${yap}</span><span class="l">Yapılacak</span></div>
+      <div class="stat"><span class="n">${dev}</span><span class="l">Devam ediyor</span></div>
+      <div class="stat${gec?' danger':''}"><span class="n">${gec}</span><span class="l">Geciken</span></div>
+    </div>
+    ${listTableHtml(mine)}
+  </div>`;
+}
+function setView(m){ viewMode=m;
+  document.getElementById("vtMine").classList.toggle("active",m==="mine");
+  document.getElementById("vtKanban").classList.toggle("active",m==="kanban");
+  document.getElementById("vtList").classList.toggle("active",m==="list");
+  render(); }
 function cardHtml(t){
   const L=LINES[t.line]||{bg:"#eee",fg:"#555",av:"#999"};
   const ppl=[t.owner,t.helper].filter(Boolean);
