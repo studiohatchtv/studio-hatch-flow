@@ -229,6 +229,7 @@
     <div class="modal-head"><h2 id="modalTitle">Yeni iş</h2><button class="icon-btn" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
       <div class="field"><label>Başlık</label><input id="f_title" placeholder="ör. Sponsoru ara, afişi tasarla..."></div>
+      <div class="field"><label>Açıklama</label><textarea id="f_desc" rows="3" placeholder="Detay, notlar... (karta tıklayınca görünür)" style="resize:vertical; min-height:64px; line-height:1.5;"></textarea></div>
       <div class="row2">
         <div class="field"><label>İş kolu</label><select id="f_line"></select></div>
         <div class="field"><label>Durum</label><select id="f_status"></select></div>
@@ -320,12 +321,12 @@ sb.auth.onAuthStateChange((event) => {
 
 /* ---------- DATA ---------- */
 function rowToTask(r){
-  return { id:r.id, title:r.baslik||"", line:r.is_kolu||"", status:r.durum||"Yapılacak",
+  return { id:r.id, title:r.baslik||"", desc:r.aciklama||"", line:r.is_kolu||"", status:r.durum||"Yapılacak",
     manager:r.yonetici||"", owner:r.ana_sorumlu||"", helper:r.yardimci_sorumlu||"",
     start:r.ilk_tarih||"", end:r.son_tarih||"" };
 }
 function taskToRow(d){
-  return { baslik:d.title, is_kolu:d.line, durum:d.status,
+  return { baslik:d.title, aciklama:d.desc||null, is_kolu:d.line, durum:d.status,
     yonetici:d.manager||null, ana_sorumlu:d.owner||null, yardimci_sorumlu:d.helper||null,
     ilk_tarih:d.start||null, son_tarih:d.end||null };
 }
@@ -439,7 +440,7 @@ function fillSelects(){
 function openNew(){
   editingId=null; document.getElementById("modalTitle").textContent="Yeni iş";
   document.getElementById("deleteBtn").style.display="none"; fillSelects();
-  set("f_title",""); set("f_line",activeLine||"Immersive"); set("f_status","Yapılacak");
+  set("f_title",""); set("f_desc",""); set("f_line",activeLine||"Immersive"); set("f_status","Yapılacak");
   set("f_manager",""); set("f_owner",""); set("f_helper",""); set("f_start",""); set("f_end","");
   showModal();
 }
@@ -447,7 +448,7 @@ function openEdit(id){
   const t=tasks.find(x=>x.id===id); if(!t) return;
   editingId=id; document.getElementById("modalTitle").textContent="İşi düzenle";
   document.getElementById("deleteBtn").style.display="inline"; fillSelects();
-  set("f_title",t.title); set("f_line",t.line); set("f_status",t.status);
+  set("f_title",t.title); set("f_desc",t.desc); set("f_line",t.line); set("f_status",t.status);
   set("f_manager",t.manager); set("f_owner",t.owner); set("f_helper",t.helper);
   set("f_start",t.start); set("f_end",t.end);
   showModal();
@@ -459,7 +460,7 @@ function closeModal(){ document.getElementById("overlay").classList.remove("show
 
 async function saveTask(){
   const title=get("f_title"); if(!title){ document.getElementById("f_title").focus(); return; }
-  const data={ title, line:get("f_line"), status:get("f_status"), manager:get("f_manager"),
+  const data={ title, desc:get("f_desc"), line:get("f_line"), status:get("f_status"), manager:get("f_manager"),
     owner:get("f_owner"), helper:get("f_helper"), start:get("f_start"), end:get("f_end") };
   const btn=document.getElementById("saveBtn"); btn.disabled=true;
   let error;

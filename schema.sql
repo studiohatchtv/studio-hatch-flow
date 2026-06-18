@@ -20,6 +20,7 @@ create table if not exists public.kisiler (
 create table if not exists public.isler (
   id               uuid primary key default gen_random_uuid(),
   baslik           text not null,
+  aciklama         text,                       -- detay/notlar (karta tıklayınca görünür)
   is_kolu          text,                       -- Immersive | Dijital Art | hatch Shop | İnşaat
   durum            text not null default 'Yapılacak',  -- Yapılacak | Devam ediyor | Tamamlandı
   yonetici         text,
