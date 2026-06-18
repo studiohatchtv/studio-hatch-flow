@@ -17,6 +17,7 @@ create table if not exists public.isler (
   id               uuid primary key default gen_random_uuid(),
   baslik           text not null,
   aciklama         text,
+  acil             boolean not null default false,
   is_kolu          text,
   durum            text not null default 'Yapılacak',
   yonetici         text,
@@ -29,8 +30,9 @@ create table if not exists public.isler (
   updated_at       timestamptz not null default now()
 );
 
--- daha önce eksik kurulmuşsa kolonu garantiye al
+-- daha önce eksik kurulmuşsa kolonları garantiye al
 alter table public.isler add column if not exists aciklama text;
+alter table public.isler add column if not exists acil boolean not null default false;
 
 -- 2) updated_at otomatik ------------------------------------
 create or replace function public.touch_updated_at()

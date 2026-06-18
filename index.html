@@ -118,6 +118,19 @@
   .notif-row .dot2 { width: 8px; height: 8px; border-radius: 50%; flex: none; }
   .nr-title { font-size: 13px; flex: 1; }
   .nr-meta { font-size: 12px; color: var(--text-3); white-space: nowrap; }
+  .urgent-toggle { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-2);
+    background: var(--surface); color: var(--text-2); padding: 8px 12px; border-radius: 8px; font-size: 14px;
+    cursor: pointer; font-family: inherit; transition: all .12s; }
+  .urgent-toggle.on { background: #fceeee; border-color: #e0a3a3; color: #c0392b; font-weight: 500; }
+  .urg { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; margin-left: 6px;
+    margin-bottom: 7px; background: #fceeee; color: #c0392b; font-weight: 600; }
+  .card.urgent { border-color: #e0a3a3; }
+  .btn-done { color: #0f6e56; border-color: #9fe1cb; }
+  .btn-done:hover { background: #e1f5ee; }
+  #toasts { position: fixed; top: 14px; right: 14px; display: flex; flex-direction: column; gap: 8px;
+    z-index: 300; max-width: 300px; }
+  .toast { background: var(--accent); color: #fff; padding: 11px 14px; border-radius: 10px; font-size: 13px;
+    line-height: 1.4; box-shadow: 0 6px 20px rgba(0,0,0,.2); cursor: pointer; transition: opacity .4s; }
 
   .col { background: rgba(0,0,0,0.025); border-radius: var(--radius); padding: 8px; min-height: 120px; }
   .col-head { display: flex; align-items: center; justify-content: space-between;
@@ -194,6 +207,7 @@
 </head>
 <body>
 
+<div id="toasts"></div>
 <div id="boot">Yükleniyor…</div>
 
 <!-- LOGIN -->
@@ -244,6 +258,10 @@
     <div class="modal-head"><h2 id="modalTitle">Yeni iş</h2><button class="icon-btn" onclick="closeModal()">&times;</button></div>
     <div class="modal-body">
       <div class="field"><label>Başlık</label><input id="f_title" placeholder="ör. Sponsoru ara, afişi tasarla..."></div>
+      <div class="field">
+        <button type="button" id="urgentToggle" class="urgent-toggle" onclick="toggleUrgent()"><span style="font-size:15px">⚠</span> Acil olarak işaretle</button>
+        <span id="urgentNote" style="display:none; font-size:12px; color:#c0392b; margin-left:8px;">Bu iş acil — kartta uyarı çıkacak</span>
+      </div>
       <div class="field"><label>Açıklama</label><textarea id="f_desc" rows="3" placeholder="Detay, notlar... (karta tıklayınca görünür)" style="resize:vertical; min-height:64px; line-height:1.5;"></textarea></div>
       <div class="row2">
         <div class="field"><label>İş kolu</label><select id="f_line"></select></div>
@@ -262,6 +280,7 @@
     <div class="modal-foot">
       <button class="link-danger" id="deleteBtn" onclick="deleteTask()">Sil</button>
       <div style="display:flex; gap:8px;">
+        <button class="btn btn-done" id="doneBtn" onclick="markDone()" style="display:none;">✓ Tamamlandı</button>
         <button class="btn" onclick="closeModal()">Vazgeç</button>
         <button class="btn btn-primary" id="saveBtn" onclick="saveTask()">Kaydet</button>
       </div>
@@ -309,6 +328,9 @@ let viewMode = "kanban";
 let editingId = null;
 let me = null;
 let myName = "";
+let editingUrgent = false;
+let prevAssign = {};
+let firstTasksLoad = true;
 
 /* ---------- AUTH ---------- */
 async function signIn() {
@@ -341,10 +363,10 @@ sb.auth.onAuthStateChange((event) => {
 function rowToTask(r){
   return { id:r.id, title:r.baslik||"", desc:r.aciklama||"", line:r.is_kolu||"", status:r.durum||"Yapılacak",
     manager:r.yonetici||"", owner:r.ana_sorumlu||"", helper:r.yardimci_sorumlu||"",
-    start:r.ilk_tarih||"", end:r.son_tarih||"", updatedAt:r.updated_at||"" };
+    start:r.ilk_tarih||"", end:r.son_tarih||"", urgent:!!r.acil, updatedAt:r.updated_at||"", createdBy:r.created_by||"" };
 }
 function taskToRow(d){
-  return { baslik:d.title, aciklama:d.desc||null, is_kolu:d.line, durum:d.status,
+  return { baslik:d.title, aciklama:d.desc||null, acil:!!d.urgent, is_kolu:d.line, durum:d.status,
     yonetici:d.manager||null, ana_sorumlu:d.owner||null, yardimci_sorumlu:d.helper||null,
     ilk_tarih:d.start||null, son_tarih:d.end||null };
 }
@@ -352,7 +374,28 @@ async function loadTasks(){
   const { data, error } = await sb.from("isler").select("*").order("created_at", { ascending: true });
   if (error) { console.error(error); alert("İşler yüklenemedi: " + error.message); return; }
   tasks = (data||[]).map(rowToTask);
+  detectNewAssignments();
   render();
+}
+function detectNewAssignments(){
+  const newMap={}; const toToast=[];
+  tasks.forEach(t=>{
+    const mine = myName && [t.manager,t.owner,t.helper].includes(myName);
+    newMap[t.id]=mine;
+    if(!firstTasksLoad && mine && !prevAssign[t.id] && t.createdBy!==(me&&me.id)) toToast.push(t);
+  });
+  prevAssign=newMap;
+  if(firstTasksLoad){ firstTasksLoad=false; return; }
+  toToast.forEach(showToast);
+}
+function showToast(t){
+  const wrap=document.getElementById("toasts");
+  const el=document.createElement("div");
+  el.className="toast";
+  el.innerHTML=`<strong>Sana yeni iş atandı</strong><br>${t.urgent?'<span style="color:#ffd2d2;">⚠ Acil · </span>':''}${escapeHtml(t.title)}`;
+  el.onclick=()=>{ openEdit(t.id); el.remove(); };
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity="0"; setTimeout(()=>el.remove(),400); }, 7000);
 }
 async function loadPeople(){
   const { data, error } = await sb.from("kisiler").select("*").order("ad", { ascending: true });
@@ -419,7 +462,7 @@ function listTableHtml(items){
   if(!items.length) return `<div class="list-empty">— gösterilecek iş yok —</div>`;
   const rows=items.map(t=>{
     const L=LINES[t.line]||{bg:"#eee",fg:"#555"}; const overdue=isOverdue(t.end,t.status);
-    return `<tr onclick="openEdit('${t.id}')"><td>${escapeHtml(t.title)}</td>
+    return `<tr onclick="openEdit('${t.id}')"><td>${t.urgent?'<span style="color:#c0392b;" title="Acil">⚠ </span>':''}${escapeHtml(t.title)}</td>
       <td><span class="pill" style="background:${L.bg};color:${L.fg}">${t.line}</span></td>
       <td class="st">${t.status}</td><td>${escapeHtml(t.manager)||"—"}</td>
       <td>${escapeHtml(t.owner)||"—"}</td><td>${escapeHtml(t.helper)||"—"}</td>
@@ -433,8 +476,8 @@ function renderList(board,visible){ board.innerHTML=`<div class="listwrap">${lis
 
 function notifRow(t, kind){
   const L=LINES[t.line]||{av:"#999"};
-  const tag = kind==="overdue"
-    ? `<span style="color:#c0392b;font-weight:600;">Gecikti</span>`
+  const tag = kind==="urgent" ? `<span style="color:#c0392b;font-weight:600;">⚠ Acil</span>`
+    : kind==="overdue" ? `<span style="color:#c0392b;font-weight:600;">Gecikti</span>`
     : `<span style="color:#854F0B;">Yaklaşıyor</span>`;
   return `<div class="notif-row" onclick="openEdit('${t.id}')">
     <span class="dot2" style="background:${L.av}"></span>
@@ -447,16 +490,20 @@ function renderMine(board){
   const yap=mine.filter(t=>t.status==="Yapılacak").length;
   const dev=mine.filter(t=>t.status==="Devam ediyor").length;
   const gec=mine.filter(t=>isOverdue(t.end,t.status)).length;
+  const aciller=mine.filter(t=>t.urgent && t.status!=="Tamamlandı");
   const gecikenler=mine.filter(t=>isOverdue(t.end,t.status));
   const yakin=mine.filter(t=>{
     if(!t.end || t.status==="Tamamlandı" || isOverdue(t.end,t.status)) return false;
     return (new Date(t.end+"T23:59:59").getTime() - Date.now()) <= 7*24*60*60*1000;
   });
+  const shown=new Set(); const items=[];
+  aciller.forEach(t=>{ if(!shown.has(t.id)){ shown.add(t.id); items.push([t,"urgent"]); } });
+  gecikenler.forEach(t=>{ if(!shown.has(t.id)){ shown.add(t.id); items.push([t,"overdue"]); } });
+  yakin.forEach(t=>{ if(!shown.has(t.id)){ shown.add(t.id); items.push([t,"soon"]); } });
   let notif="";
-  if(gecikenler.length || yakin.length){
+  if(items.length){
     notif=`<div class="notif"><div class="notif-h">📌 Dikkat — senin için</div>
-      ${gecikenler.map(t=>notifRow(t,"overdue")).join("")}
-      ${yakin.map(t=>notifRow(t,"soon")).join("")}</div>`;
+      ${items.map(([t,k])=>notifRow(t,k)).join("")}</div>`;
   }
   board.innerHTML=`<div class="listwrap">
     <div style="font-size:15px; font-weight:600; margin-bottom:12px;">Görevlerim <span style="color:var(--text-3); font-weight:400;">· ${escapeHtml(myName)}</span></div>
@@ -492,8 +539,8 @@ function cardHtml(t){
   const avatars=ppl.map(p=>`<span class="avatar" style="background:${L.av}" title="${escapeHtml(p)}">${initials(p)}</span>`).join("");
   const overdue=isOverdue(t.end,t.status);
   const due=t.end?`<span class="due ${overdue?"overdue":""}">${overdue?"⚠ ":"📅 "}${fmtDate(t.end)}</span>`:"";
-  return `<div class="card" draggable="true" data-id="${t.id}" ondragstart="onDragStart(event,'${t.id}')" ondragend="onDragEnd(event)" onclick="openEdit('${t.id}')">
-    <span class="tag" style="background:${L.bg};color:${L.fg}">${t.line}</span>
+  return `<div class="card${t.urgent?' urgent':''}" draggable="true" data-id="${t.id}" ondragstart="onDragStart(event,'${t.id}')" ondragend="onDragEnd(event)" onclick="openEdit('${t.id}')">
+    <span class="tag" style="background:${L.bg};color:${L.fg}">${t.line}</span>${t.urgent?'<span class="urg">⚠ Acil</span>':''}
     <div class="title ${t.status==='Tamamlandı'?'done':''}">${escapeHtml(t.title)}</div>
     <div class="meta"><div class="avatars">${avatars||""}</div>${due}</div></div>`;
 }
@@ -520,20 +567,35 @@ function fillSelects(){
   const opts=`<option value="">— seç —</option>`+peopleNames().map(p=>`<option>${escapeHtml(p)}</option>`).join("");
   ["f_manager","f_owner","f_helper"].forEach(id=>document.getElementById(id).innerHTML=opts);
 }
+function toggleUrgent(){ editingUrgent=!editingUrgent; updateUrgentBtn(); }
+function updateUrgentBtn(){
+  document.getElementById("urgentToggle").classList.toggle("on", editingUrgent);
+  document.getElementById("urgentNote").style.display = editingUrgent ? "inline" : "none";
+}
+async function markDone(){
+  if(!editingId) return;
+  document.getElementById("f_status").value="Tamamlandı";
+  await saveTask();
+}
 function openNew(){
   editingId=null; document.getElementById("modalTitle").textContent="Yeni iş";
-  document.getElementById("deleteBtn").style.display="none"; fillSelects();
+  document.getElementById("deleteBtn").style.display="none";
+  document.getElementById("doneBtn").style.display="none"; fillSelects();
   set("f_title",""); set("f_desc",""); set("f_line",activeLine||"Immersive"); set("f_status","Yapılacak");
   set("f_manager",""); set("f_owner",""); set("f_helper",""); set("f_start",""); set("f_end","");
+  editingUrgent=false; updateUrgentBtn();
   showModal();
 }
 function openEdit(id){
   const t=tasks.find(x=>x.id===id); if(!t) return;
   editingId=id; document.getElementById("modalTitle").textContent="İşi düzenle";
-  document.getElementById("deleteBtn").style.display="inline"; fillSelects();
+  document.getElementById("deleteBtn").style.display="inline";
+  document.getElementById("doneBtn").style.display = t.status==="Tamamlandı" ? "none" : "inline-flex";
+  fillSelects();
   set("f_title",t.title); set("f_desc",t.desc); set("f_line",t.line); set("f_status",t.status);
   set("f_manager",t.manager); set("f_owner",t.owner); set("f_helper",t.helper);
   set("f_start",t.start); set("f_end",t.end);
+  editingUrgent=!!t.urgent; updateUrgentBtn();
   showModal();
 }
 function set(id,v){ document.getElementById(id).value=v||""; }
@@ -543,7 +605,7 @@ function closeModal(){ document.getElementById("overlay").classList.remove("show
 
 async function saveTask(){
   const title=get("f_title"); if(!title){ document.getElementById("f_title").focus(); return; }
-  const data={ title, desc:get("f_desc"), line:get("f_line"), status:get("f_status"), manager:get("f_manager"),
+  const data={ title, desc:get("f_desc"), urgent:editingUrgent, line:get("f_line"), status:get("f_status"), manager:get("f_manager"),
     owner:get("f_owner"), helper:get("f_helper"), start:get("f_start"), end:get("f_end") };
   const btn=document.getElementById("saveBtn"); btn.disabled=true;
   let error;
