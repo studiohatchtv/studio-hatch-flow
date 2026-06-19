@@ -1012,7 +1012,9 @@ async function renameProject(id, ad){ ad=ad.trim(); if(!ad) return;
 async function deleteProject(id){
   const p=projects.find(x=>x.id===id); if(!p) return;
   const n=tasks.filter(t=>t.projeId===id).length;
-  if(!confirm(`"${p.ad}" projesi silinsin mi?\nBu projedeki ${n} iş ve tüm iş kolları da SİLİNİR. Geri alınamaz.`)) return;
+  const typed=prompt(`DİKKAT: "${p.ad}" projesi ve içindeki ${n} iş kalıcı olarak SİLİNECEK. Geri alınamaz.\n\nOnaylamak için proje adını birebir yaz:`);
+  if(typed===null) return;
+  if(typed.trim()!==p.ad){ alert("Ad eşleşmedi — silme iptal edildi."); return; }
   const { error } = await sb.from("projeler").delete().eq("id",id);
   if(error){ alert("Silinemedi: "+error.message); return; }
   if(currentProjectId===id){ currentProjectId=(projects.find(x=>x.id!==id)||{}).id||null; if(currentProjectId) localStorage.setItem(PROJ_KEY,currentProjectId); }
