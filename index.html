@@ -168,6 +168,12 @@
   .fileicon { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 26px; }
   .filemeta { display: flex; align-items: center; gap: 2px; margin-top: 2px; }
   .filename { font-size: 11px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+  .cmt { padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .cmt-head { display: flex; align-items: center; gap: 8px; }
+  .cmt-author { font-size: 13px; font-weight: 500; }
+  .cmt-time { font-size: 11px; color: var(--text-3); }
+  .cmt-del { margin-left: auto; font-size: 16px; }
+  .cmt-text { font-size: 13px; color: var(--text); margin-top: 2px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
   .card .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
   .avatars { display: flex; }
   .avatar { width: 23px; height: 23px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -315,6 +321,15 @@
         </div>
         <div id="fileNote" style="display:none; font-size:12px; color:var(--text-3);">Dosya eklemek için önce işi <b>Kaydet</b>, sonra tekrar aç.</div>
       </div>
+      <div class="field">
+        <label>Yorumlar / notlar</label>
+        <div id="commentList"></div>
+        <div id="commentWrap" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
+          <textarea id="commentInput" rows="2" placeholder="Yorum yaz... (ör. müşteri onayladı, şu eksik)" style="resize:vertical; min-height:40px; line-height:1.4;"></textarea>
+          <button class="btn btn-primary" onclick="addComment()" style="align-self:flex-start;">Gönder</button>
+        </div>
+        <div id="commentNote" style="display:none; font-size:12px; color:var(--text-3);">Yorum eklemek için önce işi <b>Kaydet</b>, sonra tekrar aç.</div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="link-danger" id="deleteBtn" onclick="deleteTask()">Sil</button>
@@ -435,6 +450,7 @@ let projects = [];            // {id, ad, sira}
 let isKollari = [];           // {id, proje_id, ad, renk, sira}
 let projectMembers = [];      // {proje_id, kisiler_id}
 let taskFiles = [];           // {id, is_id, ad, yol, url, tur, boyut}
+let comments = [];            // {id, is_id, yazan, yazan_id, metin, created_at}
 const FILES_BUCKET = "is-dosyalari";
 let currentProjectId = null;
 let isAdmin = false;
@@ -485,7 +501,7 @@ async function boot() {
   document.getElementById("adminBtn").style.display = isAdmin ? "inline-flex" : "none";
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadTasks()]);
   subscribe();
   initPush();
 }
@@ -610,6 +626,13 @@ async function loadFiles(){
   taskFiles = data || [];
 }
 function fileCount(isId){ return taskFiles.filter(f=>f.is_id===isId).length; }
+async function loadComments(){
+  const { data, error } = await sb.from("yorumlar").select("*").order("created_at",{ascending:true});
+  if(error){ console.error("yorumlar:", error.message); comments=[]; return; }
+  comments = data || [];
+}
+function commentCount(isId){ return comments.filter(c=>c.is_id===isId).length; }
+function fmtDateTime(iso){ if(!iso) return ""; const d=new Date(iso); const m=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"]; return d.getDate()+" "+m[d.getMonth()]+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
 function contactById(id){ return contacts.find(c=>c.id===id); }
 function contactLabel(c){ return c.firma ? c.ad+" — "+c.firma : c.ad; }
 function contactName(id){ const c=contactById(id); return c ? contactLabel(c) : ""; }
@@ -619,6 +642,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"kisiler" }, loadPeople)
     .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, loadContacts)
     .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"proje_uyeleri" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
@@ -818,7 +842,7 @@ function cardHtml(t){
     <span class="tag" style="background:${L.bg};color:${L.fg}">${t.line}</span>${t.urgent?'<span class="urg">⚠ Acil</span>':''}
     <div class="title ${t.status==='Tamamlandı'?'done':''}">${escapeHtml(t.title)}</div>
     ${t.kontakId?`<div class="card-contact">🤝 ${escapeHtml(contactName(t.kontakId))}</div>`:''}
-    <div class="meta"><div class="avatars">${avatars||""}</div><span style="display:flex; align-items:center; gap:8px;">${fileCount(t.id)?`<span class="due">📎 ${fileCount(t.id)}</span>`:""}${due}</span></div></div>`;
+    <div class="meta"><div class="avatars">${avatars||""}</div><span style="display:flex; align-items:center; gap:8px;">${commentCount(t.id)?`<span class="due">💬 ${commentCount(t.id)}</span>`:""}${fileCount(t.id)?`<span class="due">📎 ${fileCount(t.id)}</span>`:""}${due}</span></div></div>`;
 }
 
 /* drag & drop */
@@ -879,8 +903,40 @@ function compressImage(file){
 function setupFilesUI(){
   const wrap=document.getElementById("fileUploadWrap");
   const note=document.getElementById("fileNote");
-  if(editingId){ wrap.style.display="flex"; note.style.display="none"; renderFileList(editingId); }
-  else { wrap.style.display="none"; note.style.display="block"; document.getElementById("fileList").innerHTML=""; }
+  const cwrap=document.getElementById("commentWrap");
+  const cnote=document.getElementById("commentNote");
+  if(editingId){
+    wrap.style.display="flex"; note.style.display="none"; renderFileList(editingId);
+    cwrap.style.display="flex"; cnote.style.display="none"; renderComments(editingId);
+  } else {
+    wrap.style.display="none"; note.style.display="block"; document.getElementById("fileList").innerHTML="";
+    cwrap.style.display="none"; cnote.style.display="block"; document.getElementById("commentList").innerHTML="";
+  }
+}
+function renderComments(isId){
+  const el=document.getElementById("commentList");
+  const items=comments.filter(c=>c.is_id===isId).sort((a,b)=> new Date(a.created_at)-new Date(b.created_at));
+  if(!items.length){ el.innerHTML=`<div style="color:var(--text-3); font-size:13px; padding:4px 0;">Henüz yorum yok.</div>`; return; }
+  el.innerHTML=items.map(c=>{
+    const canDel=(c.yazan_id===(me&&me.id))||isAdmin;
+    return `<div class="cmt">
+      <div class="cmt-head"><span class="cmt-author">${escapeHtml(c.yazan||"")}</span><span class="cmt-time">${fmtDateTime(c.created_at)}</span>${canDel?`<button class="icon-btn cmt-del" title="Sil" onclick="deleteComment('${c.id}')">&times;</button>`:""}</div>
+      <div class="cmt-text">${escapeHtml(c.metin)}</div>
+    </div>`;
+  }).join("");
+}
+async function addComment(){
+  if(!editingId) return;
+  const inp=document.getElementById("commentInput"); const metin=inp.value.trim(); if(!metin) return;
+  const { error } = await sb.from("yorumlar").insert({ is_id:editingId, yazan:myName, yazan_id:me.id, metin });
+  if(error){ alert("Yorum eklenemedi: "+error.message); return; }
+  inp.value=""; await loadComments(); renderComments(editingId); render();
+}
+async function deleteComment(id){
+  if(!confirm("Yorum silinsin mi?")) return;
+  const { error } = await sb.from("yorumlar").delete().eq("id",id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  await loadComments(); renderComments(editingId); render();
 }
 function renderFileList(isId){
   const el=document.getElementById("fileList");
