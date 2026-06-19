@@ -1,7 +1,7 @@
 {
-  "name": "studioHATCH Flow",
-  "short_name": "HATCH Flow",
-  "description": "studioHATCH iş takip",
+  "name": "MizarLabs Flow",
+  "short_name": "MizarLabs Flow",
+  "description": "MizarLabs iş takip",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

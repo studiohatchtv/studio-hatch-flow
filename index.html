@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>studioHATCH Flow</title>
+<title>MizarLabs Flow</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#26215c">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="HATCH Flow">
+<meta name="apple-mobile-web-app-title" content="MizarLabs Flow">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
@@ -225,8 +225,8 @@
 
 <!-- LOGIN -->
 <div id="login" style="display:none;">
-  <div class="logo">H</div>
-  <h1>studioHATCH Flow</h1>
+  <div class="logo">M</div>
+  <h1>MizarLabs Flow</h1>
   <p>Ekip iş takibi. Devam etmek için Google hesabınla giriş yap.</p>
   <button class="gbtn" onclick="signIn()">
     <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -239,12 +239,13 @@
 <div id="app">
 <header>
   <div class="brand">
-    <div class="dot">H</div>
-    <div><h1>studioHATCH Flow <small>iş takip</small></h1></div>
+    <div class="dot">M</div>
+    <div><h1>MizarLabs Flow <small>iş takip</small></h1></div>
   </div>
   <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
     <button id="notifBtn" class="btn" onclick="enableNotifications()" style="display:none; padding:6px 11px;" title="Bildirimleri aç"><span style="font-size:15px">🔔</span> Bildirim</button>
     <div class="me"><span class="name" id="meName"></span><button class="out" onclick="signOut()">çıkış</button></div>
+    <button class="btn" id="adminBtn" onclick="openAdmin()" style="display:none;"><span style="font-size:15px">⚙️</span> Yönetim</button>
     <button class="btn" onclick="openContacts()"><span style="font-size:15px">📇</span> Kontaklar</button>
     <button class="btn" onclick="openPeople()"><span style="font-size:15px">👥</span> Kişiler</button>
     <button class="btn btn-primary" onclick="openNew()">+ Yeni iş</button>
@@ -252,6 +253,7 @@
 </header>
 
 <div class="toolbar">
+  <select id="projectSelect" onchange="switchProject(this.value)" style="font-weight:500;"></select>
   <div class="chips" id="lineChips"></div>
   <div class="spacer"></div>
   <div class="viewtoggle">
@@ -348,6 +350,36 @@
   </div>
 </div>
 
+<!-- Admin (Yönetim) modal -->
+<div class="overlay" id="adminOverlay">
+  <div class="modal" style="max-width: 560px;">
+    <div class="modal-head"><h2>Yönetim</h2><button class="icon-btn" onclick="closeAdmin()">&times;</button></div>
+    <div class="modal-body">
+
+      <div style="font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:8px;">Projeler</div>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input id="newProject" placeholder="Yeni proje adı" style="flex:1; border:1px solid var(--border-2); border-radius:8px; padding:9px 11px; font-size:16px; font-family:inherit;" onkeydown="if(event.key==='Enter')addProject()">
+        <button class="btn btn-primary" onclick="addProject()">Ekle</button>
+      </div>
+      <div id="adminProjects" style="margin-bottom:22px;"></div>
+
+      <div style="font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:8px;">İş kolları</div>
+      <div style="margin-bottom:8px;"><select id="adminLineProject" onchange="renderAdminLines()" style="width:100%;"></select></div>
+      <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+        <input id="newLine" placeholder="İş kolu adı" style="flex:1; min-width:120px; border:1px solid var(--border-2); border-radius:8px; padding:9px 11px; font-size:16px; font-family:inherit;" onkeydown="if(event.key==='Enter')addLine()">
+        <select id="newLineColor" style="width:120px;"></select>
+        <button class="btn btn-primary" onclick="addLine()">Ekle</button>
+      </div>
+      <div id="adminLines" style="margin-bottom:22px;"></div>
+
+      <div style="font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:8px;">Adminler</div>
+      <div id="adminPeople"></div>
+
+    </div>
+    <div class="modal-foot" style="justify-content:flex-end;"><button class="btn" onclick="closeAdmin()">Kapat</button></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://uolmzykwvizhmycgymfi.supabase.co";
@@ -359,19 +391,29 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 const VAPID_PUBLIC = "BOvqIp6gRsP3eHUTjE8VIozx9L7kUs-NmhewYA92i8Zi0XiuPn3JgffxNT_HcEnzCVzXXHbwF8R9C3MjYCiWloQ";
 let swReg = null;
 
-const LINES = {
-  "Immersive":   { bg:"#E6F1FB", fg:"#185FA5", av:"#378ADD" },
-  "Dijital Art": { bg:"#FBEAF0", fg:"#993556", av:"#D4537E" },
-  "hatch Shop":  { bg:"#E1F5EE", fg:"#0F6E56", av:"#1D9E75" },
-  "İnşaat":      { bg:"#FAECE7", fg:"#993C1D", av:"#D85A30" },
-  "Sponsorluk":  { bg:"#EEEDFE", fg:"#534AB7", av:"#7F77DD" },
-  "Dijital İşler": { bg:"#FAEEDA", fg:"#854F0B", av:"#EF9F27" },
+const MASTER_ADMIN = "samet@mizarlabs.com";
+const PALETTE = {
+  blue:   { bg:"#E6F1FB", fg:"#185FA5", av:"#378ADD", ad:"Mavi" },
+  pink:   { bg:"#FBEAF0", fg:"#993556", av:"#D4537E", ad:"Pembe" },
+  teal:   { bg:"#E1F5EE", fg:"#0F6E56", av:"#1D9E75", ad:"Turkuaz" },
+  coral:  { bg:"#FAECE7", fg:"#993C1D", av:"#D85A30", ad:"Mercan" },
+  purple: { bg:"#EEEDFE", fg:"#534AB7", av:"#7F77DD", ad:"Mor" },
+  amber:  { bg:"#FAEEDA", fg:"#854F0B", av:"#EF9F27", ad:"Amber" },
+  green:  { bg:"#EAF3DE", fg:"#3B6D11", av:"#639922", ad:"Yeşil" },
+  red:    { bg:"#FCEBEB", fg:"#A32D2D", av:"#E24B4A", ad:"Kırmızı" },
+  gray:   { bg:"#F1EFE8", fg:"#5F5E5A", av:"#888780", ad:"Gri" },
 };
+const PALETTE_KEYS = Object.keys(PALETTE);
+const GRAY = PALETTE.gray;
 const STATUSES = ["Yapılacak", "Devam ediyor", "Tamamlandı"];
 
 let tasks = [];
-let peopleRows = [];          // {id, ad, user_id}
+let peopleRows = [];          // {id, ad, user_id, is_admin}
 let contacts = [];            // {id, ad, firma, telefon, email, notlar}
+let projects = [];            // {id, ad, sira}
+let isKollari = [];           // {id, proje_id, ad, renk, sira}
+let currentProjectId = null;
+let isAdmin = false;
 let editingContactId = null;
 let activeLine = "";
 let viewMode = "kanban";
@@ -381,6 +423,14 @@ let myName = "";
 let editingUrgent = false;
 let prevAssign = {};
 let firstTasksLoad = true;
+
+const PROJ_KEY = "mizarflow_current_project";
+function projectName(id){ const p=projects.find(x=>x.id===id); return p?p.ad:""; }
+function projectLines(){ return isKollari.filter(l=>l.proje_id===currentProjectId).sort((a,b)=>a.sira-b.sira||a.ad.localeCompare(b.ad,"tr")); }
+function colorOf(t){
+  const l = isKollari.find(x=>x.proje_id===t.projeId && x.ad===t.line);
+  return (l && PALETTE[l.renk]) || GRAY;
+}
 
 /* ---------- AUTH ---------- */
 async function signIn() {
@@ -401,10 +451,34 @@ async function boot() {
   myName = me.user_metadata?.full_name || me.user_metadata?.name || me.email;
   document.getElementById("meName").textContent = myName;
   document.body.classList.add("authed");
+  await loadPeople();
+  isAdmin = (me.email===MASTER_ADMIN) || !!(peopleRows.find(p=>p.user_id===me.id)?.is_admin);
+  document.getElementById("adminBtn").style.display = isAdmin ? "inline-flex" : "none";
+  await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadPeople(), loadContacts(), loadTasks()]);
+  await Promise.all([loadContacts(), loadTasks()]);
   subscribe();
   initPush();
+}
+async function loadProjectsAndLines(){
+  const [{ data: pr }, { data: lk }] = await Promise.all([
+    sb.from("projeler").select("*").order("sira", { ascending:true }),
+    sb.from("is_kollari").select("*").order("sira", { ascending:true }),
+  ]);
+  projects = pr || []; isKollari = lk || [];
+  const saved = localStorage.getItem(PROJ_KEY);
+  if (projects.find(p=>p.id===saved)) currentProjectId = saved;
+  else if (projects.length) currentProjectId = projects[0].id;
+  buildProjectSwitcher();
+}
+function buildProjectSwitcher(){
+  const sel=document.getElementById("projectSelect");
+  sel.innerHTML = projects.map(p=>`<option value="${p.id}">${escapeHtml(p.ad)}</option>`).join("");
+  if(currentProjectId) sel.value=currentProjectId;
+}
+function switchProject(id){
+  currentProjectId=id; localStorage.setItem(PROJ_KEY, id);
+  activeLine=""; buildChips(); render();
 }
 
 /* ---------- WEB PUSH ---------- */
@@ -453,12 +527,12 @@ sb.auth.onAuthStateChange((event) => {
 function rowToTask(r){
   return { id:r.id, title:r.baslik||"", desc:r.aciklama||"", line:r.is_kolu||"", status:r.durum||"Yapılacak",
     manager:r.yonetici||"", owner:r.ana_sorumlu||"", helper:r.yardimci_sorumlu||"",
-    start:r.ilk_tarih||"", end:r.son_tarih||"", urgent:!!r.acil, kontakId:r.kontak_id||"", updatedAt:r.updated_at||"", createdBy:r.created_by||"" };
+    start:r.ilk_tarih||"", end:r.son_tarih||"", urgent:!!r.acil, kontakId:r.kontak_id||"", projeId:r.proje_id||"", updatedAt:r.updated_at||"", createdBy:r.created_by||"" };
 }
 function taskToRow(d){
   return { baslik:d.title, aciklama:d.desc||null, acil:!!d.urgent, is_kolu:d.line, durum:d.status,
     yonetici:d.manager||null, ana_sorumlu:d.owner||null, yardimci_sorumlu:d.helper||null,
-    ilk_tarih:d.start||null, son_tarih:d.end||null, kontak_id:d.kontakId||null };
+    ilk_tarih:d.start||null, son_tarih:d.end||null, kontak_id:d.kontakId||null, proje_id:d.projeId||currentProjectId };
 }
 async function loadTasks(){
   const { data, error } = await sb.from("isler").select("*").order("created_at", { ascending: true });
@@ -506,6 +580,8 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"isler" }, loadTasks)
     .on("postgres_changes", { event:"*", schema:"public", table:"kisiler" }, loadPeople)
     .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, loadContacts)
+    .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
     .subscribe();
 }
 
@@ -520,7 +596,8 @@ function escapeHtml(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&
 function buildChips(){
   const el=document.getElementById("lineChips");
   let html=`<div class="chip ${activeLine===""?"active":""}" onclick="setLine('')">Tümü</div>`;
-  for(const name in LINES){ html+=`<div class="chip ${activeLine===name?"active":""}" onclick="setLine('${name}')"><span class="swatch" style="background:${LINES[name].av}"></span>${name}</div>`; }
+  projectLines().forEach(l=>{ const c=PALETTE[l.renk]||GRAY; const safe=escapeHtml(l.ad).replace(/'/g,"\\'");
+    html+=`<div class="chip ${activeLine===l.ad?"active":""}" onclick="setLine('${safe}')"><span class="swatch" style="background:${c.av}"></span>${escapeHtml(l.ad)}</div>`; });
   el.innerHTML=html;
 }
 function setLine(l){ activeLine=l; buildChips(); render(); }
@@ -550,7 +627,7 @@ function sortTasks(arr){
 
 function visibleTasks(){
   const person=document.getElementById("personFilter").value;
-  let v=activeTasks().filter(t=>(!activeLine||t.line===activeLine));
+  let v=activeTasks().filter(t=>t.projeId===currentProjectId && (!activeLine||t.line===activeLine));
   if(person) v=v.filter(t=>[t.manager,t.owner,t.helper].includes(person));
   return v;
 }
@@ -569,24 +646,25 @@ function render(){
       <div class="col-head"><span>${st}</span><span class="count">${items.length}</span></div>${cards}</div>`;
   }).join("");
 }
-function listTableHtml(items){
+function listTableHtml(items, showProject){
   if(!items.length) return `<div class="list-empty">— gösterilecek iş yok —</div>`;
   const rows=items.map(t=>{
-    const L=LINES[t.line]||{bg:"#eee",fg:"#555"}; const overdue=isOverdue(t.end,t.status);
+    const L=colorOf(t); const overdue=isOverdue(t.end,t.status);
     return `<tr onclick="openEdit('${t.id}')"><td>${t.urgent?'<span style="color:#c0392b;" title="Acil">⚠ </span>':''}${escapeHtml(t.title)}</td>
-      <td><span class="pill" style="background:${L.bg};color:${L.fg}">${t.line}</span></td>
+      ${showProject?`<td class="st">${escapeHtml(projectName(t.projeId))}</td>`:""}
+      <td><span class="pill" style="background:${L.bg};color:${L.fg}">${escapeHtml(t.line)}</span></td>
       <td class="st">${t.status}</td><td>${escapeHtml(t.manager)||"—"}</td>
       <td>${escapeHtml(t.owner)||"—"}</td><td>${escapeHtml(t.helper)||"—"}</td>
       <td>${t.start?fmtFull(t.start):"—"}</td><td class="${overdue?'td-overdue':''}">${t.end?fmtFull(t.end):"—"}</td></tr>`;
   }).join("");
   return `<table class="list"><thead><tr>
-    <th>Başlık</th><th>İş kolu</th><th>Durum</th><th>Yönetici</th><th>Ana sorumlu</th><th>Yardımcı</th><th>İlk tarih</th><th>Son tarih</th>
+    <th>Başlık</th>${showProject?"<th>Proje</th>":""}<th>İş kolu</th><th>Durum</th><th>Yönetici</th><th>Ana sorumlu</th><th>Yardımcı</th><th>İlk tarih</th><th>Son tarih</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
 }
 function renderList(board,visible){ board.innerHTML=`<div class="listwrap">${listTableHtml(sortTasks(visible))}</div>`; }
 
 function notifRow(t, kind){
-  const L=LINES[t.line]||{av:"#999"};
+  const L=colorOf(t);
   const tag = kind==="urgent" ? `<span style="color:#c0392b;font-weight:600;">⚠ Acil</span>`
     : kind==="overdue" ? `<span style="color:#c0392b;font-weight:600;">Gecikti</span>`
     : `<span style="color:#854F0B;">Yaklaşıyor</span>`;
@@ -597,7 +675,6 @@ function notifRow(t, kind){
 }
 function renderMine(board){
   let mine = activeTasks().filter(t => myName && [t.manager,t.owner,t.helper].includes(myName));
-  if(activeLine) mine = mine.filter(t=>t.line===activeLine);
   const yap=mine.filter(t=>t.status==="Yapılacak").length;
   const dev=mine.filter(t=>t.status==="Devam ediyor").length;
   const gec=mine.filter(t=>isOverdue(t.end,t.status)).length;
@@ -617,7 +694,8 @@ function renderMine(board){
       ${items.map(([t,k])=>notifRow(t,k)).join("")}</div>`;
   }
   board.innerHTML=`<div class="listwrap">
-    <div style="font-size:15px; font-weight:600; margin-bottom:12px;">Görevlerim <span style="color:var(--text-3); font-weight:400;">· ${escapeHtml(myName)}</span></div>
+    <div style="font-size:15px; font-weight:600; margin-bottom:4px;">Görevlerim <span style="color:var(--text-3); font-weight:400;">· ${escapeHtml(myName)}</span></div>
+    <div style="font-size:12px; color:var(--text-3); margin-bottom:12px;">Tüm projelerdeki sana atanan işler.</div>
     ${notif}
     <div class="stats">
       <div class="stat"><span class="n">${mine.length}</span><span class="l">Toplam</span></div>
@@ -625,7 +703,7 @@ function renderMine(board){
       <div class="stat"><span class="n">${dev}</span><span class="l">Devam ediyor</span></div>
       <div class="stat${gec?' danger':''}"><span class="n">${gec}</span><span class="l">Geciken</span></div>
     </div>
-    ${listTableHtml(sortTasks(mine))}
+    ${listTableHtml(sortTasks(mine), true)}
   </div>`;
 }
 function sortByDate(arr){
@@ -636,7 +714,7 @@ function sortByDate(arr){
   });
 }
 function takvimRow(t){
-  const L=LINES[t.line]||{av:"#999"};
+  const L=colorOf(t);
   const overdue=isOverdue(t.end,t.status);
   return `<div class="cal-row" onclick="openEdit('${t.id}')">
     <span class="dot2" style="background:${L.av}"></span>
@@ -674,7 +752,7 @@ function renderTakvim(board){
     ${html}</div>`;
 }
 function renderArchive(board){
-  let arch = tasks.filter(isArchived);
+  let arch = tasks.filter(t=>isArchived(t) && t.projeId===currentProjectId);
   if(activeLine) arch = arch.filter(t=>t.line===activeLine);
   arch.sort((a,b)=> new Date(b.updatedAt) - new Date(a.updatedAt));
   board.innerHTML=`<div class="listwrap">
@@ -691,7 +769,7 @@ function setView(m){ viewMode=m;
   document.getElementById("vtArchive").classList.toggle("active",m==="archive");
   render(); }
 function cardHtml(t){
-  const L=LINES[t.line]||{bg:"#eee",fg:"#555",av:"#999"};
+  const L=colorOf(t);
   const ppl=[t.owner,t.helper].filter(Boolean);
   const avatars=ppl.map(p=>`<span class="avatar" style="background:${L.av}" title="${escapeHtml(p)}">${initials(p)}</span>`).join("");
   const overdue=isOverdue(t.end,t.status);
@@ -720,7 +798,7 @@ async function onDrop(e,status){
 
 /* modal */
 function fillSelects(){
-  document.getElementById("f_line").innerHTML=Object.keys(LINES).map(l=>`<option>${l}</option>`).join("");
+  document.getElementById("f_line").innerHTML=projectLines().map(l=>`<option>${escapeHtml(l.ad)}</option>`).join("");
   document.getElementById("f_status").innerHTML=STATUSES.map(s=>`<option>${s}</option>`).join("");
   const opts=`<option value="">— seç —</option>`+peopleNames().map(p=>`<option>${escapeHtml(p)}</option>`).join("");
   ["f_manager","f_owner","f_helper"].forEach(id=>document.getElementById(id).innerHTML=opts);
@@ -742,10 +820,12 @@ async function markDone(){
   await saveTask();
 }
 function openNew(){
+  if(!currentProjectId){ alert("Önce bir proje oluştur (⚙️ Yönetim)."); return; }
   editingId=null; document.getElementById("modalTitle").textContent="Yeni iş";
   document.getElementById("deleteBtn").style.display="none";
   document.getElementById("doneBtn").style.display="none"; fillSelects();
-  set("f_title",""); set("f_desc",""); set("f_line",activeLine||"Immersive"); set("f_status","Yapılacak");
+  const firstLine=(projectLines()[0]||{}).ad||"";
+  set("f_title",""); set("f_desc",""); set("f_line",activeLine||firstLine); set("f_status","Yapılacak");
   set("f_manager",""); set("f_owner",""); set("f_helper",""); set("f_start",""); set("f_end","");
   set("f_kontak",""); onKontakChange();
   editingUrgent=false; updateUrgentBtn();
@@ -771,8 +851,9 @@ function closeModal(){ document.getElementById("overlay").classList.remove("show
 
 async function saveTask(){
   const title=get("f_title"); if(!title){ document.getElementById("f_title").focus(); return; }
+  const projeId = editingId ? (tasks.find(x=>x.id===editingId)?.projeId||currentProjectId) : currentProjectId;
   const data={ title, desc:get("f_desc"), urgent:editingUrgent, line:get("f_line"), status:get("f_status"), manager:get("f_manager"),
-    owner:get("f_owner"), helper:get("f_helper"), start:get("f_start"), end:get("f_end"), kontakId:get("f_kontak") };
+    owner:get("f_owner"), helper:get("f_helper"), start:get("f_start"), end:get("f_end"), kontakId:get("f_kontak"), projeId };
   const btn=document.getElementById("saveBtn"); btn.disabled=true;
   let error;
   if(editingId){ ({ error } = await sb.from("isler").update(taskToRow(data)).eq("id", editingId)); }
@@ -864,10 +945,120 @@ async function deleteContact(id){
   await loadContacts(); renderContactsList(); render();
 }
 
+/* admin / yönetim */
+function colorOptions(selKey){ return PALETTE_KEYS.map(k=>`<option value="${k}" ${k===selKey?"selected":""}>${PALETTE[k].ad}</option>`).join(""); }
+async function refreshAfterAdmin(){ await loadProjectsAndLines(); buildChips(); render(); renderAdminAll(); }
+function openAdmin(){
+  if(!isAdmin) return;
+  document.getElementById("newLineColor").innerHTML=colorOptions("blue");
+  renderAdminAll();
+  document.getElementById("adminOverlay").classList.add("show");
+}
+function closeAdmin(){ document.getElementById("adminOverlay").classList.remove("show"); }
+function renderAdminAll(){ renderAdminProjects(); buildAdminLineProject(); renderAdminLines(); renderAdminPeople(); }
+
+function renderAdminProjects(){
+  const el=document.getElementById("adminProjects");
+  if(!projects.length){ el.innerHTML=`<div style="color:var(--text-3); font-size:13px;">Henüz proje yok.</div>`; return; }
+  el.innerHTML=projects.map(p=>`
+    <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border);">
+      <input value="${escapeHtml(p.ad)}" onchange="renameProject('${p.id}', this.value)" style="flex:1; border:1px solid var(--border-2); border-radius:8px; padding:7px 10px; font-size:14px; font-family:inherit;">
+      <button class="icon-btn" title="Sil" onclick="deleteProject('${p.id}')">&times;</button>
+    </div>`).join("");
+}
+function buildAdminLineProject(){
+  const sel=document.getElementById("adminLineProject"); const cur=sel.value||currentProjectId;
+  sel.innerHTML=projects.map(p=>`<option value="${p.id}">${escapeHtml(p.ad)}</option>`).join("");
+  if(projects.find(p=>p.id===cur)) sel.value=cur;
+}
+function renderAdminLines(){
+  const pid=document.getElementById("adminLineProject").value;
+  const el=document.getElementById("adminLines");
+  const lines=isKollari.filter(l=>l.proje_id===pid).sort((a,b)=>a.sira-b.sira||a.ad.localeCompare(b.ad,"tr"));
+  if(!lines.length){ el.innerHTML=`<div style="color:var(--text-3); font-size:13px;">Bu projede iş kolu yok.</div>`; return; }
+  el.innerHTML=lines.map(l=>{ const c=PALETTE[l.renk]||GRAY;
+    return `<div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border);">
+      <span style="width:12px; height:12px; border-radius:50%; background:${c.av}; flex:none;"></span>
+      <input value="${escapeHtml(l.ad)}" onchange="renameLine('${l.id}', this.value)" style="flex:1; border:1px solid var(--border-2); border-radius:8px; padding:7px 10px; font-size:14px; font-family:inherit;">
+      <select onchange="recolorLine('${l.id}', this.value)" style="width:110px;">${colorOptions(l.renk)}</select>
+      <button class="icon-btn" title="Sil" onclick="deleteLine('${l.id}')">&times;</button>
+    </div>`; }).join("");
+}
+function renderAdminPeople(){
+  const el=document.getElementById("adminPeople");
+  const members=peopleRows.filter(p=>p.user_id);
+  if(!members.length){ el.innerHTML=`<div style="color:var(--text-3); font-size:13px;">Henüz üye yok.</div>`; return; }
+  el.innerHTML=members.slice().sort((a,b)=>a.ad.localeCompare(b.ad,"tr")).map(p=>{
+    const master=p.email===MASTER_ADMIN;
+    const badge = master ? `<span style="font-size:11px; color:#534AB7; background:#EEEDFE; padding:3px 9px; border-radius:999px;">master admin</span>`
+      : p.is_admin ? `<span style="font-size:11px; color:var(--text-success); background:var(--color-background-success,#E1F5EE); padding:3px 9px; border-radius:999px; cursor:pointer;" onclick="setAdmin('${p.id}',false)">admin ✓ (kaldır)</span>`
+      : `<span style="font-size:11px; color:var(--text-3); border:0.5px solid var(--border-2); padding:3px 9px; border-radius:999px; cursor:pointer;" onclick="setAdmin('${p.id}',true)">admin yap</span>`;
+    return `<div style="display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;">${escapeHtml(p.ad)}${p.email?` <span style="color:var(--text-3); font-size:11px;">· ${escapeHtml(p.email)}</span>`:""}</span>${badge}</div>`;
+  }).join("");
+}
+async function addProject(){
+  const inp=document.getElementById("newProject"); const ad=inp.value.trim(); if(!ad) return;
+  const { data, error } = await sb.from("projeler").insert({ ad, sira: projects.length }).select().single();
+  if(error){ alert("Eklenemedi: "+error.message); return; }
+  inp.value=""; if(data) currentProjectId=data.id;
+  await refreshAfterAdmin(); buildProjectSwitcher(); if(data) localStorage.setItem(PROJ_KEY,data.id);
+}
+async function renameProject(id, ad){ ad=ad.trim(); if(!ad) return;
+  const { error } = await sb.from("projeler").update({ ad }).eq("id",id);
+  if(error){ alert("Güncellenemedi: "+error.message); return; }
+  await refreshAfterAdmin(); buildProjectSwitcher();
+}
+async function deleteProject(id){
+  const p=projects.find(x=>x.id===id); if(!p) return;
+  const n=tasks.filter(t=>t.projeId===id).length;
+  if(!confirm(`"${p.ad}" projesi silinsin mi?\nBu projedeki ${n} iş ve tüm iş kolları da SİLİNİR. Geri alınamaz.`)) return;
+  const { error } = await sb.from("projeler").delete().eq("id",id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  if(currentProjectId===id){ currentProjectId=(projects.find(x=>x.id!==id)||{}).id||null; if(currentProjectId) localStorage.setItem(PROJ_KEY,currentProjectId); }
+  await refreshAfterAdmin(); buildProjectSwitcher();
+}
+async function addLine(){
+  const pid=document.getElementById("adminLineProject").value;
+  const inp=document.getElementById("newLine"); const ad=inp.value.trim(); if(!ad||!pid) return;
+  const renk=document.getElementById("newLineColor").value;
+  const cnt=isKollari.filter(l=>l.proje_id===pid).length;
+  const { error } = await sb.from("is_kollari").insert({ proje_id:pid, ad, renk, sira:cnt });
+  if(error){ alert("Eklenemedi: "+error.message); return; }
+  inp.value=""; await refreshAfterAdmin();
+}
+async function renameLine(id, ad){ ad=ad.trim(); if(!ad) return;
+  const old=isKollari.find(l=>l.id===id); if(!old) return;
+  const { error } = await sb.from("is_kollari").update({ ad }).eq("id",id);
+  if(error){ alert("Güncellenemedi: "+error.message); return; }
+  // mevcut işlerdeki eski adı yeni adla güncelle (renk/eşleşme korunsun)
+  if(old.ad!==ad){ await sb.from("isler").update({ is_kolu:ad }).eq("proje_id",old.proje_id).eq("is_kolu",old.ad); }
+  await loadTasks(); await refreshAfterAdmin();
+}
+async function recolorLine(id, renk){
+  const { error } = await sb.from("is_kollari").update({ renk }).eq("id",id);
+  if(error){ alert("Güncellenemedi: "+error.message); return; }
+  await refreshAfterAdmin();
+}
+async function deleteLine(id){
+  const l=isKollari.find(x=>x.id===id); if(!l) return;
+  const n=tasks.filter(t=>t.projeId===l.proje_id && t.line===l.ad).length;
+  if(!confirm(`"${l.ad}" iş kolu silinsin mi?${n?`\n${n} iş bu kolu kullanıyor; onlar kalır ama renksiz görünür.`:""}`)) return;
+  const { error } = await sb.from("is_kollari").delete().eq("id",id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  await refreshAfterAdmin();
+}
+async function setAdmin(personId, val){
+  const { error } = await sb.from("kisiler").update({ is_admin: val }).eq("id", personId);
+  if(error){ alert("Güncellenemedi: "+error.message); return; }
+  await loadPeople(); renderAdminPeople();
+}
+
 document.getElementById("overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
 document.getElementById("peopleOverlay").addEventListener("click", e=>{ if(e.target.id==="peopleOverlay") closePeople(); });
 document.getElementById("contactsOverlay").addEventListener("click", e=>{ if(e.target.id==="contactsOverlay") closeContacts(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); } });
+document.getElementById("adminOverlay").addEventListener("click", e=>{ if(e.target.id==="adminOverlay") closeAdmin(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); } });
 
 boot();
 </script>
