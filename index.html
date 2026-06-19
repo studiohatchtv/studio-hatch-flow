@@ -372,6 +372,11 @@
       </div>
       <div id="adminLines" style="margin-bottom:22px;"></div>
 
+      <div style="font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:8px;">Proje üyeleri <span style="font-weight:400; color:var(--text-3);">· kimler görsün</span></div>
+      <div style="margin-bottom:8px;"><select id="adminMemberProject" onchange="renderAdminMembers()" style="width:100%;"></select></div>
+      <div style="font-size:12px; color:var(--text-3); margin-bottom:8px;">Kimse seçili değilse proje <b>herkese açık</b>. Biri seçilince yalnızca seçilenler (ve adminler) görür.</div>
+      <div id="adminMembers" style="margin-bottom:22px;"></div>
+
       <div style="font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:8px;">Adminler</div>
       <div id="adminPeople"></div>
 
@@ -412,6 +417,7 @@ let peopleRows = [];          // {id, ad, user_id, is_admin}
 let contacts = [];            // {id, ad, firma, telefon, email, notlar}
 let projects = [];            // {id, ad, sira}
 let isKollari = [];           // {id, proje_id, ad, renk, sira}
+let projectMembers = [];      // {proje_id, kisiler_id}
 let currentProjectId = null;
 let isAdmin = false;
 let editingContactId = null;
@@ -426,6 +432,11 @@ let firstTasksLoad = true;
 
 const PROJ_KEY = "mizarflow_current_project";
 function projectName(id){ const p=projects.find(x=>x.id===id); return p?p.ad:""; }
+function myKisiId(){ return (peopleRows.find(p=>p.user_id===(me&&me.id))||{}).id||null; }
+function projectHasMembers(pid){ return projectMembers.some(m=>m.proje_id===pid); }
+function isMemberOf(pid, kid){ return projectMembers.some(m=>m.proje_id===pid && m.kisiler_id===kid); }
+function canSeeProject(pid){ return isAdmin || !projectHasMembers(pid) || isMemberOf(pid, myKisiId()); }
+function visibleProjects(){ return projects.filter(p=>canSeeProject(p.id)); }
 function projectLines(){ return isKollari.filter(l=>l.proje_id===currentProjectId).sort((a,b)=>a.sira-b.sira||a.ad.localeCompare(b.ad,"tr")); }
 function colorOf(t){
   const l = isKollari.find(x=>x.proje_id===t.projeId && x.ad===t.line);
@@ -461,19 +472,22 @@ async function boot() {
   initPush();
 }
 async function loadProjectsAndLines(){
-  const [{ data: pr }, { data: lk }] = await Promise.all([
+  const [{ data: pr }, { data: lk }, { data: pu }] = await Promise.all([
     sb.from("projeler").select("*").order("sira", { ascending:true }),
     sb.from("is_kollari").select("*").order("sira", { ascending:true }),
+    sb.from("proje_uyeleri").select("*"),
   ]);
-  projects = pr || []; isKollari = lk || [];
+  projects = pr || []; isKollari = lk || []; projectMembers = pu || [];
+  const vis = visibleProjects();
   const saved = localStorage.getItem(PROJ_KEY);
-  if (projects.find(p=>p.id===saved)) currentProjectId = saved;
-  else if (projects.length) currentProjectId = projects[0].id;
+  if (vis.find(p=>p.id===saved)) currentProjectId = saved;
+  else if (vis.length) currentProjectId = vis[0].id;
+  else currentProjectId = null;
   buildProjectSwitcher();
 }
 function buildProjectSwitcher(){
   const sel=document.getElementById("projectSelect");
-  sel.innerHTML = projects.map(p=>`<option value="${p.id}">${escapeHtml(p.ad)}</option>`).join("");
+  sel.innerHTML = visibleProjects().map(p=>`<option value="${p.id}">${escapeHtml(p.ad)}</option>`).join("");
   if(currentProjectId) sel.value=currentProjectId;
 }
 function switchProject(id){
@@ -582,6 +596,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, loadContacts)
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"proje_uyeleri" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
     .subscribe();
 }
 
@@ -674,7 +689,7 @@ function notifRow(t, kind){
     <span class="nr-meta">${tag}${t.end?" · "+fmtFull(t.end):""}</span></div>`;
 }
 function renderMine(board){
-  let mine = activeTasks().filter(t => myName && [t.manager,t.owner,t.helper].includes(myName));
+  let mine = activeTasks().filter(t => myName && [t.manager,t.owner,t.helper].includes(myName) && canSeeProject(t.projeId));
   const yap=mine.filter(t=>t.status==="Yapılacak").length;
   const dev=mine.filter(t=>t.status==="Devam ediyor").length;
   const gec=mine.filter(t=>isOverdue(t.end,t.status)).length;
@@ -955,7 +970,7 @@ function openAdmin(){
   document.getElementById("adminOverlay").classList.add("show");
 }
 function closeAdmin(){ document.getElementById("adminOverlay").classList.remove("show"); }
-function renderAdminAll(){ renderAdminProjects(); buildAdminLineProject(); renderAdminLines(); renderAdminPeople(); }
+function renderAdminAll(){ renderAdminProjects(); buildAdminLineProject(); renderAdminLines(); buildAdminMemberProject(); renderAdminMembers(); renderAdminPeople(); }
 
 function renderAdminProjects(){
   const el=document.getElementById("adminProjects");
@@ -1049,6 +1064,33 @@ async function deleteLine(id){
   const { error } = await sb.from("is_kollari").delete().eq("id",id);
   if(error){ alert("Silinemedi: "+error.message); return; }
   await refreshAfterAdmin();
+}
+function buildAdminMemberProject(){
+  const sel=document.getElementById("adminMemberProject"); const cur=sel.value||currentProjectId;
+  sel.innerHTML=projects.map(p=>`<option value="${p.id}">${escapeHtml(p.ad)}</option>`).join("");
+  if(projects.find(p=>p.id===cur)) sel.value=cur;
+}
+function renderAdminMembers(){
+  const pid=document.getElementById("adminMemberProject").value;
+  const el=document.getElementById("adminMembers");
+  const members=peopleRows.filter(p=>p.user_id).slice().sort((a,b)=>a.ad.localeCompare(b.ad,"tr"));
+  if(!members.length){ el.innerHTML=`<div style="color:var(--text-3); font-size:13px;">Henüz üye yok.</div>`; return; }
+  const open=!projectHasMembers(pid);
+  el.innerHTML=members.map(p=>{
+    const checked=isMemberOf(pid,p.id);
+    return `<label style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); cursor:pointer;">
+      <input type="checkbox" ${checked?"checked":""} onchange="toggleMember('${pid}','${p.id}', this.checked)" style="width:auto;">
+      <span style="font-size:14px;">${escapeHtml(p.ad)}</span>
+      ${open?'<span style="font-size:11px; color:var(--text-3); margin-left:auto;">(şu an herkese açık)</span>':''}
+    </label>`;
+  }).join("");
+}
+async function toggleMember(pid, kid, checked){
+  let error;
+  if(checked){ ({error}=await sb.from("proje_uyeleri").insert({ proje_id:pid, kisiler_id:kid })); }
+  else { ({error}=await sb.from("proje_uyeleri").delete().eq("proje_id",pid).eq("kisiler_id",kid)); }
+  if(error){ alert("Güncellenemedi: "+error.message); return; }
+  await loadProjectsAndLines(); buildProjectSwitcher(); buildChips(); render(); renderAdminMembers();
 }
 async function setAdmin(personId, val){
   const { error } = await sb.from("kisiler").update({ is_admin: val }).eq("id", personId);
