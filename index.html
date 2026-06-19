@@ -161,6 +161,13 @@
   .card .title { font-size: 13.5px; line-height: 1.4; }
   .card .title.done { text-decoration: line-through; color: var(--text-3); }
   .card-contact { font-size: 11px; color: var(--text-3); margin-top: 6px; }
+  .filegrid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+  .fileitem { width: 84px; }
+  .filethumb { display: block; width: 84px; height: 64px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface-2); }
+  .filethumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .fileicon { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+  .filemeta { display: flex; align-items: center; gap: 2px; margin-top: 2px; }
+  .filename { font-size: 11px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
   .card .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
   .avatars { display: flex; }
   .avatar { width: 23px; height: 23px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -299,6 +306,15 @@
         <div class="field"><label>İlk tarih</label><input id="f_start" type="date"></div>
         <div class="field"><label>Son tarih</label><input id="f_end" type="date"></div>
       </div>
+      <div class="field">
+        <label>Dosyalar / fotoğraflar</label>
+        <div id="fileList"></div>
+        <div id="fileUploadWrap" style="display:none; align-items:center; gap:8px; flex-wrap:wrap;">
+          <input type="file" id="fileInput" accept="image/*,application/pdf" multiple onchange="onFilePick(event)" style="font-size:13px; flex:1; min-width:160px;">
+          <span id="fileHint" style="font-size:12px; color:var(--text-3);"></span>
+        </div>
+        <div id="fileNote" style="display:none; font-size:12px; color:var(--text-3);">Dosya eklemek için önce işi <b>Kaydet</b>, sonra tekrar aç.</div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="link-danger" id="deleteBtn" onclick="deleteTask()">Sil</button>
@@ -418,6 +434,8 @@ let contacts = [];            // {id, ad, firma, telefon, email, notlar}
 let projects = [];            // {id, ad, sira}
 let isKollari = [];           // {id, proje_id, ad, renk, sira}
 let projectMembers = [];      // {proje_id, kisiler_id}
+let taskFiles = [];           // {id, is_id, ad, yol, url, tur, boyut}
+const FILES_BUCKET = "is-dosyalari";
 let currentProjectId = null;
 let isAdmin = false;
 let editingContactId = null;
@@ -467,7 +485,7 @@ async function boot() {
   document.getElementById("adminBtn").style.display = isAdmin ? "inline-flex" : "none";
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadTasks()]);
   subscribe();
   initPush();
 }
@@ -586,6 +604,12 @@ async function loadContacts(){
   if (error) { console.error("kontaklar:", error.message); contacts=[]; return; }
   contacts = data || [];
 }
+async function loadFiles(){
+  const { data, error } = await sb.from("is_dosyalari").select("*").order("created_at",{ascending:true});
+  if(error){ console.error("dosyalar:", error.message); taskFiles=[]; return; }
+  taskFiles = data || [];
+}
+function fileCount(isId){ return taskFiles.filter(f=>f.is_id===isId).length; }
 function contactById(id){ return contacts.find(c=>c.id===id); }
 function contactLabel(c){ return c.firma ? c.ad+" — "+c.firma : c.ad; }
 function contactName(id){ const c=contactById(id); return c ? contactLabel(c) : ""; }
@@ -594,6 +618,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"isler" }, loadTasks)
     .on("postgres_changes", { event:"*", schema:"public", table:"kisiler" }, loadPeople)
     .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, loadContacts)
+    .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"proje_uyeleri" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
@@ -793,7 +818,7 @@ function cardHtml(t){
     <span class="tag" style="background:${L.bg};color:${L.fg}">${t.line}</span>${t.urgent?'<span class="urg">⚠ Acil</span>':''}
     <div class="title ${t.status==='Tamamlandı'?'done':''}">${escapeHtml(t.title)}</div>
     ${t.kontakId?`<div class="card-contact">🤝 ${escapeHtml(contactName(t.kontakId))}</div>`:''}
-    <div class="meta"><div class="avatars">${avatars||""}</div>${due}</div></div>`;
+    <div class="meta"><div class="avatars">${avatars||""}</div><span style="display:flex; align-items:center; gap:8px;">${fileCount(t.id)?`<span class="due">📎 ${fileCount(t.id)}</span>`:""}${due}</span></div></div>`;
 }
 
 /* drag & drop */
@@ -834,6 +859,70 @@ async function markDone(){
   document.getElementById("f_status").value="Tamamlandı";
   await saveTask();
 }
+/* dosyalar */
+function compressImage(file){
+  return new Promise((resolve)=>{
+    if(!file.type.startsWith("image/")){ resolve(file); return; }
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const max=1600; let w=img.width, h=img.height;
+      if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      c.toBlob(b=>resolve(b||file), "image/jpeg", 0.7);
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); resolve(file); };
+    img.src=url;
+  });
+}
+function setupFilesUI(){
+  const wrap=document.getElementById("fileUploadWrap");
+  const note=document.getElementById("fileNote");
+  if(editingId){ wrap.style.display="flex"; note.style.display="none"; renderFileList(editingId); }
+  else { wrap.style.display="none"; note.style.display="block"; document.getElementById("fileList").innerHTML=""; }
+}
+function renderFileList(isId){
+  const el=document.getElementById("fileList");
+  const items=taskFiles.filter(f=>f.is_id===isId);
+  if(!items.length){ el.innerHTML=""; return; }
+  el.innerHTML=`<div class="filegrid">`+items.map(f=>{
+    const isImg=(f.tur||"").startsWith("image/");
+    const thumb=isImg?`<img src="${f.url}" alt="">`:`<div class="fileicon">📄</div>`;
+    return `<div class="fileitem">
+      <a href="${f.url}" target="_blank" rel="noopener" class="filethumb">${thumb}</a>
+      <div class="filemeta"><span class="filename" title="${escapeHtml(f.ad)}">${escapeHtml(f.ad)}</span>
+      <button class="icon-btn" title="Sil" onclick="deleteFile('${f.id}','${(f.yol||'').replace(/'/g,"\\'")}')">&times;</button></div>
+    </div>`;
+  }).join("")+`</div>`;
+}
+async function onFilePick(e){
+  if(!editingId) return;
+  const files=[...e.target.files]; e.target.value="";
+  const hint=document.getElementById("fileHint");
+  for(const f of files){
+    hint.textContent=`"${f.name}" yükleniyor…`;
+    const isImg=f.type.startsWith("image/");
+    const blob=isImg? await compressImage(f) : f;
+    const safe=f.name.replace(/[^\w.\-]+/g,"_");
+    const path=`${editingId}/${Date.now()}-${Math.random().toString(36).slice(2,7)}-${safe}`;
+    const { error: upErr } = await sb.storage.from(FILES_BUCKET).upload(path, blob, { contentType:isImg?"image/jpeg":(f.type||"application/octet-stream"), upsert:false });
+    if(upErr){ alert("Yüklenemedi: "+upErr.message); hint.textContent=""; continue; }
+    const url=sb.storage.from(FILES_BUCKET).getPublicUrl(path).data.publicUrl;
+    const { error: insErr } = await sb.from("is_dosyalari").insert({ is_id:editingId, ad:f.name, yol:path, url, tur:(isImg?"image/jpeg":f.type), boyut:blob.size });
+    if(insErr){ alert("Kaydedilemedi: "+insErr.message); }
+  }
+  hint.textContent="";
+  await loadFiles(); renderFileList(editingId); render();
+}
+async function deleteFile(id, yol){
+  if(!confirm("Dosya silinsin mi?")) return;
+  if(yol) await sb.storage.from(FILES_BUCKET).remove([yol]);
+  const { error } = await sb.from("is_dosyalari").delete().eq("id",id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  await loadFiles(); renderFileList(editingId); render();
+}
+
 function openNew(){
   if(!currentProjectId){ alert("Önce bir proje oluştur (⚙️ Yönetim)."); return; }
   editingId=null; document.getElementById("modalTitle").textContent="Yeni iş";
@@ -844,6 +933,7 @@ function openNew(){
   set("f_manager",""); set("f_owner",""); set("f_helper",""); set("f_start",""); set("f_end","");
   set("f_kontak",""); onKontakChange();
   editingUrgent=false; updateUrgentBtn();
+  setupFilesUI();
   showModal();
 }
 function openEdit(id){
@@ -857,6 +947,7 @@ function openEdit(id){
   set("f_start",t.start); set("f_end",t.end);
   set("f_kontak",t.kontakId); onKontakChange();
   editingUrgent=!!t.urgent; updateUrgentBtn();
+  setupFilesUI();
   showModal();
 }
 function set(id,v){ document.getElementById(id).value=v||""; }
