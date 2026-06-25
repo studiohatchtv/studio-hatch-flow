@@ -10,8 +10,11 @@ create table if not exists public.yorumlar (
   yazan      text,
   yazan_id   uuid references auth.users(id) default auth.uid(),
   metin      text not null,
+  etiketliler uuid[] default '{}',
   created_at timestamptz not null default now()
 );
+-- daha önce kurulmuşsa etiket kolonunu ekle
+alter table public.yorumlar add column if not exists etiketliler uuid[] default '{}';
 
 alter table public.yorumlar enable row level security;
 

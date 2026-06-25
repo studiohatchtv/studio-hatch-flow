@@ -174,6 +174,10 @@
   .cmt-time { font-size: 11px; color: var(--text-3); }
   .cmt-del { margin-left: auto; font-size: 16px; }
   .cmt-text { font-size: 13px; color: var(--text); margin-top: 2px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .mention { color: var(--accent); font-weight: 500; }
+  .mentionbox { background: var(--surface); border: 1px solid var(--border-2); border-radius: 8px; box-shadow: var(--shadow); max-height: 170px; overflow-y: auto; }
+  .mention-opt { padding: 8px 12px; font-size: 14px; cursor: pointer; }
+  .mention-opt:hover { background: var(--surface-2); }
   .card .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
   .avatars { display: flex; }
   .avatar { width: 23px; height: 23px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -325,7 +329,8 @@
         <label>Yorumlar / notlar</label>
         <div id="commentList"></div>
         <div id="commentWrap" style="display:none; flex-direction:column; gap:8px; margin-top:8px;">
-          <textarea id="commentInput" rows="2" placeholder="Yorum yaz... (ör. müşteri onayladı, şu eksik)" style="resize:vertical; min-height:40px; line-height:1.4;"></textarea>
+          <textarea id="commentInput" rows="2" placeholder="Yorum yaz... (@ ile kişi etiketle)" style="resize:vertical; min-height:40px; line-height:1.4;" oninput="onCommentInput()"></textarea>
+          <div id="mentionBox" class="mentionbox" style="display:none;"></div>
           <button class="btn btn-primary" onclick="addComment()" style="align-self:flex-start;">Gönder</button>
         </div>
         <div id="commentNote" style="display:none; font-size:12px; color:var(--text-3);">Yorum eklemek için önce işi <b>Kaydet</b>, sonra tekrar aç.</div>
@@ -450,7 +455,10 @@ let projects = [];            // {id, ad, sira}
 let isKollari = [];           // {id, proje_id, ad, renk, sira}
 let projectMembers = [];      // {proje_id, kisiler_id}
 let taskFiles = [];           // {id, is_id, ad, yol, url, tur, boyut}
-let comments = [];            // {id, is_id, yazan, yazan_id, metin, created_at}
+let comments = [];            // {id, is_id, yazan, yazan_id, metin, etiketliler, created_at}
+let prevCommentIds = new Set();
+let firstCommentsLoad = true;
+let pendingMentions = {};      // user_id -> ad
 const FILES_BUCKET = "is-dosyalari";
 let currentProjectId = null;
 let isAdmin = false;
@@ -630,6 +638,24 @@ async function loadComments(){
   const { data, error } = await sb.from("yorumlar").select("*").order("created_at",{ascending:true});
   if(error){ console.error("yorumlar:", error.message); comments=[]; return; }
   comments = data || [];
+  detectNewMentions();
+}
+function detectNewMentions(){
+  const toToast=[];
+  comments.forEach(c=>{
+    if(!prevCommentIds.has(c.id)){
+      if(!firstCommentsLoad && c.yazan_id!==(me&&me.id) && Array.isArray(c.etiketliler) && c.etiketliler.includes(me&&me.id)) toToast.push(c);
+      prevCommentIds.add(c.id);
+    }
+  });
+  if(firstCommentsLoad){ firstCommentsLoad=false; return; }
+  toToast.forEach(showMentionToast);
+}
+function showMentionToast(c){
+  const wrap=document.getElementById("toasts"); const el=document.createElement("div"); el.className="toast";
+  el.innerHTML=`<strong>${escapeHtml(c.yazan||"Biri")} seni etiketledi</strong><br>${escapeHtml((c.metin||"").slice(0,80))}`;
+  el.onclick=()=>{ openEdit(c.is_id); el.remove(); };
+  wrap.appendChild(el); setTimeout(()=>{ el.style.opacity="0"; setTimeout(()=>el.remove(),400); },7000);
 }
 function commentCount(isId){ return comments.filter(c=>c.is_id===isId).length; }
 function fmtDateTime(iso){ if(!iso) return ""; const d=new Date(iso); const m=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"]; return d.getDate()+" "+m[d.getMonth()]+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
@@ -901,6 +927,7 @@ function compressImage(file){
   });
 }
 function setupFilesUI(){
+  pendingMentions={}; const mb=document.getElementById("mentionBox"); if(mb) mb.style.display="none";
   const wrap=document.getElementById("fileUploadWrap");
   const note=document.getElementById("fileNote");
   const cwrap=document.getElementById("commentWrap");
@@ -913,6 +940,14 @@ function setupFilesUI(){
     cwrap.style.display="none"; cnote.style.display="block"; document.getElementById("commentList").innerHTML="";
   }
 }
+function highlightMentions(text){
+  let html=escapeHtml(text);
+  peopleNames().slice().sort((a,b)=>b.length-a.length).forEach(n=>{
+    const esc=escapeHtml(n);
+    html=html.split("@"+esc).join(`<span class="mention">@${esc}</span>`);
+  });
+  return html;
+}
 function renderComments(isId){
   const el=document.getElementById("commentList");
   const items=comments.filter(c=>c.is_id===isId).sort((a,b)=> new Date(a.created_at)-new Date(b.created_at));
@@ -921,16 +956,41 @@ function renderComments(isId){
     const canDel=(c.yazan_id===(me&&me.id))||isAdmin;
     return `<div class="cmt">
       <div class="cmt-head"><span class="cmt-author">${escapeHtml(c.yazan||"")}</span><span class="cmt-time">${fmtDateTime(c.created_at)}</span>${canDel?`<button class="icon-btn cmt-del" title="Sil" onclick="deleteComment('${c.id}')">&times;</button>`:""}</div>
-      <div class="cmt-text">${escapeHtml(c.metin)}</div>
+      <div class="cmt-text">${highlightMentions(c.metin||"")}</div>
     </div>`;
   }).join("");
+}
+function onCommentInput(){
+  const ta=document.getElementById("commentInput");
+  const upto=ta.value.slice(0, ta.selectionStart);
+  const m=upto.match(/@([^\s@]*)$/);
+  const box=document.getElementById("mentionBox");
+  if(!m){ box.style.display="none"; return; }
+  const q=m[1].toLowerCase();
+  const matches=peopleNames().filter(n=>n.toLowerCase().includes(q)).slice(0,6);
+  if(!matches.length){ box.style.display="none"; return; }
+  box.innerHTML=matches.map(n=>`<div class="mention-opt" onmousedown="pickMention(event,'${escapeHtml(n).replace(/'/g,"\\'")}')">${escapeHtml(n)}</div>`).join("");
+  box.style.display="block";
+}
+function pickMention(e, name){
+  e.preventDefault();
+  const ta=document.getElementById("commentInput");
+  const pos=ta.selectionStart; const before=ta.value.slice(0,pos); const after=ta.value.slice(pos);
+  const newBefore=before.replace(/@([^\s@]*)$/, "@"+name+" ");
+  ta.value=newBefore+after;
+  const p=peopleRows.find(x=>x.ad===name && x.user_id);
+  if(p) pendingMentions[p.user_id]=name;
+  document.getElementById("mentionBox").style.display="none";
+  ta.focus(); const np=newBefore.length; ta.setSelectionRange(np,np);
 }
 async function addComment(){
   if(!editingId) return;
   const inp=document.getElementById("commentInput"); const metin=inp.value.trim(); if(!metin) return;
-  const { error } = await sb.from("yorumlar").insert({ is_id:editingId, yazan:myName, yazan_id:me.id, metin });
+  const etiketliler=Object.entries(pendingMentions).filter(([id,name])=>metin.includes("@"+name)).map(([id])=>id);
+  const { error } = await sb.from("yorumlar").insert({ is_id:editingId, yazan:myName, yazan_id:me.id, metin, etiketliler });
   if(error){ alert("Yorum eklenemedi: "+error.message); return; }
-  inp.value=""; await loadComments(); renderComments(editingId); render();
+  inp.value=""; pendingMentions={}; document.getElementById("mentionBox").style.display="none";
+  await loadComments(); renderComments(editingId); render();
 }
 async function deleteComment(id){
   if(!confirm("Yorum silinsin mi?")) return;
