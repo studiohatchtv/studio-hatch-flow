@@ -440,6 +440,7 @@
         <div class="field"><label>Ürün grubu</label><input id="pr_grup" placeholder="ör. el yapımı seramik"></div>
         <div class="field"><label>Aşama</label><select id="pr_asama"></select></div>
       </div>
+      <div class="field"><label>Sözleşme durumu <span style="color:var(--text-3); font-weight:400;">· kabul edildikten sonra</span></label><select id="pr_sozlesme"></select></div>
       <div class="field"><label>Instagram</label>
         <div style="display:flex; gap:8px;"><input id="pr_ig" placeholder="@kullanıcı veya link" style="flex:1;"><button type="button" class="btn" onclick="openUrl('pr_ig')" title="Aç">↗</button></div></div>
       <div class="field"><label>Websitesi</label>
@@ -453,6 +454,15 @@
       <div class="row2">
         <div class="field"><label>İsim soyisim</label><input id="pr_k2ad"></div>
         <div class="field"><label>Telefon</label><div style="display:flex; gap:8px;"><input id="pr_k2tel" inputmode="tel" style="flex:1;"><button type="button" class="btn" onclick="callTel('pr_k2tel')">Ara</button></div></div>
+      </div>
+      <div class="field">
+        <label>Sözleşme dosyaları</label>
+        <div id="prFileList"></div>
+        <div id="prFileWrap" style="display:none; align-items:center; gap:8px; flex-wrap:wrap;">
+          <input type="file" id="prFileInput" accept="image/*,application/pdf" multiple onchange="onProducerFilePick(event)" style="font-size:13px; flex:1; min-width:160px;">
+          <span id="prFileHint" style="font-size:12px; color:var(--text-3);"></span>
+        </div>
+        <div id="prFileNote" style="display:none; font-size:12px; color:var(--text-3);">Dosya eklemek için önce üreticiyi <b>Kaydet</b>, sonra tekrar aç.</div>
       </div>
     </div>
     <div class="modal-foot">
@@ -514,8 +524,15 @@ let prevAssign = {};
 let firstTasksLoad = true;
 let section = "isler";          // "isler" | "ureticiler"
 let producers = [];
+let producerFiles = [];
 let editingProducerId = null;
 const UASAMALAR = ["Teklif İletildi","Kabul Edildi","Numune Talep Edildi","Ürün Tedariği Başladı","Red Edildi"];
+const SOZLESME = ["Sözleşme Gönderildi","Sözleşme Revize","Sözleşme İmzalandı"];
+function sozlesmeColor(s){
+  return s==="Sözleşme İmzalandı" ? {bg:"#E1F5EE",fg:"#0F6E56"}
+    : s==="Sözleşme Revize"     ? {bg:"#E6F1FB",fg:"#185FA5"}
+    : s==="Sözleşme Gönderildi" ? {bg:"#FAEEDA",fg:"#854F0B"} : null;
+}
 
 const PROJ_KEY = "mizarflow_current_project";
 function projectName(id){ const p=projects.find(x=>x.id===id); return p?p.ad:""; }
@@ -554,7 +571,7 @@ async function boot() {
   document.getElementById("adminBtn").style.display = isAdmin ? "inline-flex" : "none";
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadTasks()]);
   subscribe();
   initPush();
 }
@@ -715,6 +732,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"ureticiler" }, loadProducers)
+    .on("postgres_changes", { event:"*", schema:"public", table:"uretici_dosyalari" }, async()=>{ await loadProducerFiles(); if(editingProducerId) renderProducerFiles(editingProducerId); if(section==="ureticiler") renderProducers(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"proje_uyeleri" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
@@ -1359,6 +1377,12 @@ async function loadProducers(){
   producers = data || [];
   if(section==="ureticiler") renderProducers();
 }
+async function loadProducerFiles(){
+  const { data, error } = await sb.from("uretici_dosyalari").select("*").order("created_at",{ascending:true});
+  if(error){ console.error("uretici_dosyalari:", error.message); producerFiles=[]; return; }
+  producerFiles = data || [];
+}
+function producerFileCount(id){ return producerFiles.filter(f=>f.uretici_id===id).length; }
 function toggleSection(s){
   section=s;
   document.getElementById("taskToolbar").style.display = s==="isler" ? "flex" : "none";
@@ -1368,10 +1392,13 @@ function toggleSection(s){
 }
 function prodCardHtml(p){
   const done=p.asama==="Red Edildi";
+  const sc=sozlesmeColor(p.sozlesme_durumu);
+  const fc=producerFileCount(p.id);
   return `<div class="card" draggable="true" data-id="${p.id}" ondragstart="onProdDragStart(event,'${p.id}')" ondragend="onDragEnd(event)" onclick="openProducerEdit('${p.id}')">
     <div class="title ${done?'done':''}">${escapeHtml(p.magaza)}</div>
     ${p.urun_grubu?`<div class="card-contact">${escapeHtml(p.urun_grubu)}</div>`:""}
-    <div class="meta"><span style="display:flex; gap:6px;">${p.instagram?'<span class="due">IG</span>':''}${p.website?'<span class="due">web</span>':''}</span>${p.kisi1_ad?`<span class="due">${escapeHtml(p.kisi1_ad)}</span>`:""}</div>
+    ${sc?`<div style="margin-top:6px;"><span class="tag" style="background:${sc.bg};color:${sc.fg}">${escapeHtml(p.sozlesme_durumu)}</span></div>`:""}
+    <div class="meta"><span style="display:flex; gap:6px;">${p.instagram?'<span class="due">IG</span>':''}${p.website?'<span class="due">web</span>':''}${fc?`<span class="due">📎 ${fc}</span>`:''}</span>${p.kisi1_ad?`<span class="due">${escapeHtml(p.kisi1_ad)}</span>`:""}</div>
   </div>`;
 }
 function renderProducers(){
@@ -1399,13 +1426,57 @@ function gv(id){ return document.getElementById(id).value.trim()||null; }
 function openUrl(id){ let v=document.getElementById(id).value.trim(); if(!v) return; if(!/^https?:/i.test(v)) v="https://"+v.replace(/^@/,"instagram.com/"); window.open(v,"_blank","noopener"); }
 function callTel(id){ const v=document.getElementById(id).value.trim(); if(v) window.location.href="tel:"+v.replace(/\s+/g,""); }
 function fillStageSelect(){ document.getElementById("pr_asama").innerHTML=UASAMALAR.map(s=>`<option>${s}</option>`).join(""); }
+function fillSozlesmeSelect(){ document.getElementById("pr_sozlesme").innerHTML=`<option value="">— henüz —</option>`+SOZLESME.map(s=>`<option>${s}</option>`).join(""); }
+function renderProducerFiles(id){
+  const el=document.getElementById("prFileList");
+  const items=producerFiles.filter(f=>f.uretici_id===id);
+  if(!items.length){ el.innerHTML=""; return; }
+  el.innerHTML=`<div class="filegrid">`+items.map(f=>{
+    const isImg=(f.tur||"").startsWith("image/");
+    const thumb=isImg?`<img src="${f.url}" alt="">`:`<div class="fileicon">📄</div>`;
+    return `<div class="fileitem"><a href="${f.url}" target="_blank" rel="noopener" class="filethumb">${thumb}</a>
+      <div class="filemeta"><span class="filename" title="${escapeHtml(f.ad)}">${escapeHtml(f.ad)}</span>
+      <button class="icon-btn" title="Sil" onclick="deleteProducerFile('${f.id}','${(f.yol||'').replace(/'/g,"\\'")}')">&times;</button></div></div>`;
+  }).join("")+`</div>`;
+}
+async function onProducerFilePick(e){
+  if(!editingProducerId) return;
+  const files=[...e.target.files]; e.target.value="";
+  const hint=document.getElementById("prFileHint");
+  for(const f of files){
+    hint.textContent=`"${f.name}" yükleniyor…`;
+    const isImg=f.type.startsWith("image/"); const blob=isImg?await compressImage(f):f;
+    const safe=f.name.replace(/[^\w.\-]+/g,"_");
+    const path=`uretici/${editingProducerId}/${Date.now()}-${Math.random().toString(36).slice(2,7)}-${safe}`;
+    const { error: upErr } = await sb.storage.from(FILES_BUCKET).upload(path, blob, { contentType:isImg?"image/jpeg":(f.type||"application/octet-stream"), upsert:false });
+    if(upErr){ alert("Yüklenemedi: "+upErr.message); hint.textContent=""; continue; }
+    const url=sb.storage.from(FILES_BUCKET).getPublicUrl(path).data.publicUrl;
+    const { error: insErr } = await sb.from("uretici_dosyalari").insert({ uretici_id:editingProducerId, ad:f.name, yol:path, url, tur:(isImg?"image/jpeg":f.type), boyut:blob.size });
+    if(insErr){ alert("Kaydedilemedi: "+insErr.message); }
+  }
+  hint.textContent=""; await loadProducerFiles(); renderProducerFiles(editingProducerId); renderProducers();
+}
+async function deleteProducerFile(id, yol){
+  if(!confirm("Dosya silinsin mi?")) return;
+  if(yol) await sb.storage.from(FILES_BUCKET).remove([yol]);
+  const { error } = await sb.from("uretici_dosyalari").delete().eq("id",id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  await loadProducerFiles(); renderProducerFiles(editingProducerId); renderProducers();
+}
+function setupProducerFilesUI(){
+  const wrap=document.getElementById("prFileWrap"), note=document.getElementById("prFileNote");
+  if(editingProducerId){ wrap.style.display="flex"; note.style.display="none"; renderProducerFiles(editingProducerId); }
+  else { wrap.style.display="none"; note.style.display="block"; document.getElementById("prFileList").innerHTML=""; }
+}
 function openProducer(){
   editingProducerId=null;
   document.getElementById("prodModalTitle").textContent="Yeni üretici";
   document.getElementById("prodDeleteBtn").style.display="none";
-  fillStageSelect();
+  fillStageSelect(); fillSozlesmeSelect();
   ["pr_magaza","pr_grup","pr_ig","pr_web","pr_k1ad","pr_k1tel","pr_k2ad","pr_k2tel"].forEach(id=>setV(id,""));
   document.getElementById("pr_asama").value="Teklif İletildi";
+  document.getElementById("pr_sozlesme").value="";
+  setupProducerFilesUI();
   document.getElementById("prodOverlay").classList.add("show");
   setTimeout(()=>document.getElementById("pr_magaza").focus(),50);
 }
@@ -1414,10 +1485,12 @@ function openProducerEdit(id){
   editingProducerId=id;
   document.getElementById("prodModalTitle").textContent="Üreticiyi düzenle";
   document.getElementById("prodDeleteBtn").style.display="inline";
-  fillStageSelect();
+  fillStageSelect(); fillSozlesmeSelect();
   setV("pr_magaza",p.magaza); setV("pr_grup",p.urun_grubu); setV("pr_ig",p.instagram); setV("pr_web",p.website);
   document.getElementById("pr_asama").value=p.asama||"Teklif İletildi";
+  document.getElementById("pr_sozlesme").value=p.sozlesme_durumu||"";
   setV("pr_k1ad",p.kisi1_ad); setV("pr_k1tel",p.kisi1_tel); setV("pr_k2ad",p.kisi2_ad); setV("pr_k2tel",p.kisi2_tel);
+  setupProducerFilesUI();
   document.getElementById("prodOverlay").classList.add("show");
 }
 function closeProducer(){ document.getElementById("prodOverlay").classList.remove("show"); }
@@ -1425,6 +1498,7 @@ async function saveProducer(){
   const magaza=document.getElementById("pr_magaza").value.trim();
   if(!magaza){ document.getElementById("pr_magaza").focus(); return; }
   const data={ magaza, urun_grubu:gv("pr_grup"), instagram:gv("pr_ig"), website:gv("pr_web"), asama:document.getElementById("pr_asama").value,
+    sozlesme_durumu:document.getElementById("pr_sozlesme").value||null,
     kisi1_ad:gv("pr_k1ad"), kisi1_tel:gv("pr_k1tel"), kisi2_ad:gv("pr_k2ad"), kisi2_tel:gv("pr_k2tel") };
   let error;
   if(editingProducerId){ ({error}=await sb.from("ureticiler").update(data).eq("id",editingProducerId)); }
