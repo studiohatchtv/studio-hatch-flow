@@ -93,6 +93,7 @@
   .viewtoggle .vt.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
 
   .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; padding: 14px 22px 40px; align-items: start; }
+  .board.prod { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 
   .listwrap { padding: 14px 22px 40px; }
   table.list { width: 100%; border-collapse: collapse; background: var(--surface);
@@ -227,7 +228,7 @@
   #boot { position: fixed; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-3); font-size:14px; z-index:200; background:var(--bg); }
 
   @media (max-width: 760px) {
-    .board { grid-template-columns: 1fr; }
+    .board, .board.prod { grid-template-columns: 1fr; }
     .row2 { grid-template-columns: 1fr; }
     header { padding-left: 16px; padding-right: 16px; }
     .toolbar { padding-left: 16px; padding-right: 16px; }
@@ -263,13 +264,14 @@
     <button id="notifBtn" class="btn" onclick="enableNotifications()" style="display:none; padding:6px 11px;" title="Bildirimleri aç"><span style="font-size:15px">🔔</span> Bildirim</button>
     <div class="me"><span class="name" id="meName"></span><button class="out" onclick="signOut()">çıkış</button></div>
     <button class="btn" id="adminBtn" onclick="openAdmin()" style="display:none;"><span style="font-size:15px">⚙️</span> Yönetim</button>
+    <button class="btn" id="prodBtn" onclick="toggleSection(section==='ureticiler'?'isler':'ureticiler')"><span style="font-size:15px">🏭</span> Üreticiler</button>
     <button class="btn" onclick="openContacts()"><span style="font-size:15px">📇</span> Kontaklar</button>
     <button class="btn" onclick="openPeople()"><span style="font-size:15px">👥</span> Kişiler</button>
     <button class="btn btn-primary" onclick="openNew()">+ Yeni iş</button>
   </div>
 </header>
 
-<div class="toolbar">
+<div class="toolbar" id="taskToolbar">
   <select id="projectSelect" onchange="switchProject(this.value)" style="font-weight:500;"></select>
   <div class="chips" id="lineChips"></div>
   <div class="spacer"></div>
@@ -282,6 +284,13 @@
   </div>
   <select id="personFilter" onchange="render()"><option value="">Herkes</option></select>
   <button class="btn" onclick="exportExcel()"><span style="font-size:14px">⬇</span> Excel'e aktar</button>
+</div>
+
+<div class="toolbar" id="prodToolbar" style="display:none;">
+  <button class="btn" onclick="toggleSection('isler')">← İşler</button>
+  <span style="font-weight:600; font-size:15px;">🏭 Üreticiler</span>
+  <div class="spacer"></div>
+  <button class="btn btn-primary" onclick="openProducer()">+ Üretici</button>
 </div>
 
 <div id="board"></div>
@@ -421,6 +430,38 @@
   </div>
 </div>
 
+<!-- Producer (Üretici) modal -->
+<div class="overlay" id="prodOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="prodModalTitle">Yeni üretici</h2><button class="icon-btn" onclick="closeProducer()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Mağaza ismi</label><input id="pr_magaza" placeholder="ör. ABC Seramik"></div>
+      <div class="row2">
+        <div class="field"><label>Ürün grubu</label><input id="pr_grup" placeholder="ör. el yapımı seramik"></div>
+        <div class="field"><label>Aşama</label><select id="pr_asama"></select></div>
+      </div>
+      <div class="field"><label>Instagram</label>
+        <div style="display:flex; gap:8px;"><input id="pr_ig" placeholder="@kullanıcı veya link" style="flex:1;"><button type="button" class="btn" onclick="openUrl('pr_ig')" title="Aç">↗</button></div></div>
+      <div class="field"><label>Websitesi</label>
+        <div style="display:flex; gap:8px;"><input id="pr_web" placeholder="site.com" style="flex:1;"><button type="button" class="btn" onclick="openUrl('pr_web')" title="Aç">↗</button></div></div>
+      <div style="font-size:12px; font-weight:600; color:var(--text-2); margin:12px 0 6px;">Kontak kişi 1</div>
+      <div class="row2">
+        <div class="field"><label>İsim soyisim</label><input id="pr_k1ad"></div>
+        <div class="field"><label>Telefon</label><div style="display:flex; gap:8px;"><input id="pr_k1tel" inputmode="tel" style="flex:1;"><button type="button" class="btn" onclick="callTel('pr_k1tel')">Ara</button></div></div>
+      </div>
+      <div style="font-size:12px; font-weight:600; color:var(--text-2); margin:12px 0 6px;">Kontak kişi 2</div>
+      <div class="row2">
+        <div class="field"><label>İsim soyisim</label><input id="pr_k2ad"></div>
+        <div class="field"><label>Telefon</label><div style="display:flex; gap:8px;"><input id="pr_k2tel" inputmode="tel" style="flex:1;"><button type="button" class="btn" onclick="callTel('pr_k2tel')">Ara</button></div></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="link-danger" id="prodDeleteBtn" onclick="deleteProducer()">Sil</button>
+      <div style="display:flex; gap:8px;"><button class="btn" onclick="closeProducer()">Vazgeç</button><button class="btn btn-primary" onclick="saveProducer()">Kaydet</button></div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://uolmzykwvizhmycgymfi.supabase.co";
@@ -471,6 +512,10 @@ let myName = "";
 let editingUrgent = false;
 let prevAssign = {};
 let firstTasksLoad = true;
+let section = "isler";          // "isler" | "ureticiler"
+let producers = [];
+let editingProducerId = null;
+const UASAMALAR = ["Teklif İletildi","Kabul Edildi","Numune Talep Edildi","Ürün Tedariği Başladı","Red Edildi"];
 
 const PROJ_KEY = "mizarflow_current_project";
 function projectName(id){ const p=projects.find(x=>x.id===id); return p?p.ad:""; }
@@ -509,7 +554,7 @@ async function boot() {
   document.getElementById("adminBtn").style.display = isAdmin ? "inline-flex" : "none";
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadTasks()]);
   subscribe();
   initPush();
 }
@@ -669,6 +714,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, loadContacts)
     .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"ureticiler" }, loadProducers)
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"proje_uyeleri" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
@@ -722,6 +768,7 @@ function visibleTasks(){
   return v;
 }
 function render(){
+  if(section!=="isler") return;
   const board=document.getElementById("board");
   const visible=visibleTasks();
   if(viewMode==="mine"){ board.className=""; renderMine(board); return; }
@@ -1305,11 +1352,99 @@ async function setAdmin(personId, val){
   await loadPeople(); renderAdminPeople();
 }
 
+/* üreticiler */
+async function loadProducers(){
+  const { data, error } = await sb.from("ureticiler").select("*").order("created_at",{ascending:true});
+  if(error){ console.error("ureticiler:", error.message); producers=[]; return; }
+  producers = data || [];
+  if(section==="ureticiler") renderProducers();
+}
+function toggleSection(s){
+  section=s;
+  document.getElementById("taskToolbar").style.display = s==="isler" ? "flex" : "none";
+  document.getElementById("prodToolbar").style.display = s==="ureticiler" ? "flex" : "none";
+  document.getElementById("prodBtn").classList.toggle("btn-primary", s==="ureticiler");
+  if(s==="ureticiler"){ renderProducers(); } else { render(); }
+}
+function prodCardHtml(p){
+  const done=p.asama==="Red Edildi";
+  return `<div class="card" draggable="true" data-id="${p.id}" ondragstart="onProdDragStart(event,'${p.id}')" ondragend="onDragEnd(event)" onclick="openProducerEdit('${p.id}')">
+    <div class="title ${done?'done':''}">${escapeHtml(p.magaza)}</div>
+    ${p.urun_grubu?`<div class="card-contact">${escapeHtml(p.urun_grubu)}</div>`:""}
+    <div class="meta"><span style="display:flex; gap:6px;">${p.instagram?'<span class="due">IG</span>':''}${p.website?'<span class="due">web</span>':''}</span>${p.kisi1_ad?`<span class="due">${escapeHtml(p.kisi1_ad)}</span>`:""}</div>
+  </div>`;
+}
+function renderProducers(){
+  const board=document.getElementById("board"); board.className="board prod";
+  board.innerHTML=UASAMALAR.map(st=>{
+    const items=producers.filter(p=>p.asama===st);
+    const cards=items.map(prodCardHtml).join("")||`<div class="empty-col">— boş —</div>`;
+    const safe=escapeHtml(st).replace(/'/g,"\\'");
+    return `<div class="col" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onProdDrop(event,'${safe}')">
+      <div class="col-head"><span>${st}</span><span class="count">${items.length}</span></div>${cards}</div>`;
+  }).join("");
+}
+let prodDragId=null;
+function onProdDragStart(e,id){ prodDragId=id; e.currentTarget.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; }
+async function onProdDrop(e,stage){
+  e.preventDefault(); e.currentTarget.classList.remove("drag-over");
+  const p=producers.find(x=>x.id===prodDragId); prodDragId=null;
+  if(p && p.asama!==stage){ p.asama=stage; renderProducers();
+    const { error } = await sb.from("ureticiler").update({ asama:stage }).eq("id", p.id);
+    if(error){ alert("Güncellenemedi: "+error.message); loadProducers(); }
+  }
+}
+function setV(id,v){ document.getElementById(id).value=v||""; }
+function gv(id){ return document.getElementById(id).value.trim()||null; }
+function openUrl(id){ let v=document.getElementById(id).value.trim(); if(!v) return; if(!/^https?:/i.test(v)) v="https://"+v.replace(/^@/,"instagram.com/"); window.open(v,"_blank","noopener"); }
+function callTel(id){ const v=document.getElementById(id).value.trim(); if(v) window.location.href="tel:"+v.replace(/\s+/g,""); }
+function fillStageSelect(){ document.getElementById("pr_asama").innerHTML=UASAMALAR.map(s=>`<option>${s}</option>`).join(""); }
+function openProducer(){
+  editingProducerId=null;
+  document.getElementById("prodModalTitle").textContent="Yeni üretici";
+  document.getElementById("prodDeleteBtn").style.display="none";
+  fillStageSelect();
+  ["pr_magaza","pr_grup","pr_ig","pr_web","pr_k1ad","pr_k1tel","pr_k2ad","pr_k2tel"].forEach(id=>setV(id,""));
+  document.getElementById("pr_asama").value="Teklif İletildi";
+  document.getElementById("prodOverlay").classList.add("show");
+  setTimeout(()=>document.getElementById("pr_magaza").focus(),50);
+}
+function openProducerEdit(id){
+  const p=producers.find(x=>x.id===id); if(!p) return;
+  editingProducerId=id;
+  document.getElementById("prodModalTitle").textContent="Üreticiyi düzenle";
+  document.getElementById("prodDeleteBtn").style.display="inline";
+  fillStageSelect();
+  setV("pr_magaza",p.magaza); setV("pr_grup",p.urun_grubu); setV("pr_ig",p.instagram); setV("pr_web",p.website);
+  document.getElementById("pr_asama").value=p.asama||"Teklif İletildi";
+  setV("pr_k1ad",p.kisi1_ad); setV("pr_k1tel",p.kisi1_tel); setV("pr_k2ad",p.kisi2_ad); setV("pr_k2tel",p.kisi2_tel);
+  document.getElementById("prodOverlay").classList.add("show");
+}
+function closeProducer(){ document.getElementById("prodOverlay").classList.remove("show"); }
+async function saveProducer(){
+  const magaza=document.getElementById("pr_magaza").value.trim();
+  if(!magaza){ document.getElementById("pr_magaza").focus(); return; }
+  const data={ magaza, urun_grubu:gv("pr_grup"), instagram:gv("pr_ig"), website:gv("pr_web"), asama:document.getElementById("pr_asama").value,
+    kisi1_ad:gv("pr_k1ad"), kisi1_tel:gv("pr_k1tel"), kisi2_ad:gv("pr_k2ad"), kisi2_tel:gv("pr_k2tel") };
+  let error;
+  if(editingProducerId){ ({error}=await sb.from("ureticiler").update(data).eq("id",editingProducerId)); }
+  else { ({error}=await sb.from("ureticiler").insert(data)); }
+  if(error){ alert("Kaydedilemedi: "+error.message); return; }
+  closeProducer(); await loadProducers(); renderProducers();
+}
+async function deleteProducer(){
+  if(!editingProducerId) return; if(!confirm("Bu üretici silinsin mi?")) return;
+  const { error } = await sb.from("ureticiler").delete().eq("id",editingProducerId);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  closeProducer(); await loadProducers(); renderProducers();
+}
+
 document.getElementById("overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
 document.getElementById("peopleOverlay").addEventListener("click", e=>{ if(e.target.id==="peopleOverlay") closePeople(); });
 document.getElementById("contactsOverlay").addEventListener("click", e=>{ if(e.target.id==="contactsOverlay") closeContacts(); });
 document.getElementById("adminOverlay").addEventListener("click", e=>{ if(e.target.id==="adminOverlay") closeAdmin(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); } });
+document.getElementById("prodOverlay").addEventListener("click", e=>{ if(e.target.id==="prodOverlay") closeProducer(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); closeProducer(); } });
 
 boot();
 </script>
