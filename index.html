@@ -179,6 +179,15 @@
   .mentionbox { background: var(--surface); border: 1px solid var(--border-2); border-radius: 8px; box-shadow: var(--shadow); max-height: 170px; overflow-y: auto; }
   .mention-opt { padding: 8px 12px; font-size: 14px; cursor: pointer; }
   .mention-opt:hover { background: var(--surface-2); }
+  .badge { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px;
+    background: #c0392b; color: #fff; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .ntf { display: flex; align-items: flex-start; gap: 10px; padding: 10px 8px; border-bottom: 1px solid var(--border); cursor: pointer; border-radius: 6px; }
+  .ntf:hover { background: var(--surface-2); }
+  .ntf.unread { background: var(--color-background-info, #E6F1FB); }
+  .ntf-ico { font-size: 16px; line-height: 1.4; }
+  .ntf-text { font-size: 13px; line-height: 1.4; }
+  .ntf-time { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+  .ntf-dot { width: 8px; height: 8px; border-radius: 50%; background: #185FA5; flex: none; margin-top: 5px; }
   .card .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
   .avatars { display: flex; }
   .avatar { width: 23px; height: 23px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -261,7 +270,8 @@
     <div><h1>MizarLabs Flow <small>iş takip</small></h1></div>
   </div>
   <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
-    <button id="notifBtn" class="btn" onclick="enableNotifications()" style="display:none; padding:6px 11px;" title="Bildirimleri aç"><span style="font-size:15px">🔔</span> Bildirim</button>
+    <button id="inboxBtn" class="btn" onclick="openBildirimler()" style="position:relative; padding:6px 11px;" title="Bildirimler"><span style="font-size:15px">🔔</span><span id="inboxBadge" class="badge" style="display:none;"></span></button>
+    <button id="notifBtn" class="btn" onclick="enableNotifications()" style="display:none; padding:6px 11px;" title="Telefon bildirimlerini aç"><span style="font-size:15px">📲</span> Aç</button>
     <div class="me"><span class="name" id="meName"></span><button class="out" onclick="signOut()">çıkış</button></div>
     <button class="btn" id="adminBtn" onclick="openAdmin()" style="display:none;"><span style="font-size:15px">⚙️</span> Yönetim</button>
     <button class="btn" id="prodBtn" onclick="toggleSection(section==='ureticiler'?'isler':'ureticiler')"><span style="font-size:15px">🏭</span> Üreticiler</button>
@@ -472,6 +482,18 @@
   </div>
 </div>
 
+<!-- Bildirimler (inbox) modal -->
+<div class="overlay" id="inboxOverlay">
+  <div class="modal" style="max-width: 440px;">
+    <div class="modal-head"><h2>Bildirimler</h2><button class="icon-btn" onclick="closeBildirimler()">&times;</button></div>
+    <div class="modal-body">
+      <div style="display:flex; justify-content:flex-end; margin-bottom:8px;"><button class="btn" onclick="markAllRead()" style="font-size:13px;">Tümünü okundu işaretle</button></div>
+      <div id="inboxList"></div>
+    </div>
+    <div class="modal-foot" style="justify-content:flex-end;"><button class="btn" onclick="closeBildirimler()">Kapat</button></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://uolmzykwvizhmycgymfi.supabase.co";
@@ -510,6 +532,7 @@ let comments = [];            // {id, is_id, yazan, yazan_id, metin, etiketliler
 let prevCommentIds = new Set();
 let firstCommentsLoad = true;
 let pendingMentions = {};      // user_id -> ad
+let bildirimler = [];          // {id, user_id, tur, metin, is_id, okundu, created_at}
 const FILES_BUCKET = "is-dosyalari";
 let currentProjectId = null;
 let isAdmin = false;
@@ -571,7 +594,7 @@ async function boot() {
   document.getElementById("adminBtn").style.display = isAdmin ? "inline-flex" : "none";
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadBildirimler(), loadTasks()]);
   subscribe();
   initPush();
 }
@@ -733,6 +756,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"ureticiler" }, loadProducers)
     .on("postgres_changes", { event:"*", schema:"public", table:"uretici_dosyalari" }, async()=>{ await loadProducerFiles(); if(editingProducerId) renderProducerFiles(editingProducerId); if(section==="ureticiler") renderProducers(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"bildirimler" }, async()=>{ await loadBildirimler(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"proje_uyeleri" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
@@ -1054,6 +1078,8 @@ async function addComment(){
   const etiketliler=Object.entries(pendingMentions).filter(([id,name])=>metin.includes("@"+name)).map(([id])=>id);
   const { error } = await sb.from("yorumlar").insert({ is_id:editingId, yazan:myName, yazan_id:me.id, metin, etiketliler });
   if(error){ alert("Yorum eklenemedi: "+error.message); return; }
+  const mrows=etiketliler.filter(id=>id!==me.id).map(id=>({ user_id:id, tur:"yorum", metin:`${myName} seni etiketledi: ${metin.slice(0,80)}`, is_id:editingId }));
+  if(mrows.length){ const r=await sb.from("bildirimler").insert(mrows); if(r.error) console.error("bildirim:", r.error.message); }
   inp.value=""; pendingMentions={}; document.getElementById("mentionBox").style.display="none";
   await loadComments(); renderComments(editingId); render();
 }
@@ -1141,12 +1167,14 @@ async function saveTask(){
   const projeId = editingId ? (tasks.find(x=>x.id===editingId)?.projeId||currentProjectId) : currentProjectId;
   const data={ title, desc:get("f_desc"), urgent:editingUrgent, line:get("f_line"), status:get("f_status"), manager:get("f_manager"),
     owner:get("f_owner"), helper:get("f_helper"), start:get("f_start"), end:get("f_end"), kontakId:get("f_kontak"), projeId };
+  const oldT = editingId ? tasks.find(x=>x.id===editingId) : null;
   const btn=document.getElementById("saveBtn"); btn.disabled=true;
-  let error;
+  let error, savedId=editingId;
   if(editingId){ ({ error } = await sb.from("isler").update(taskToRow(data)).eq("id", editingId)); }
-  else { ({ error } = await sb.from("isler").insert(taskToRow(data))); }
+  else { const r = await sb.from("isler").insert(taskToRow(data)).select("id").single(); error=r.error; savedId=r.data&&r.data.id; }
   btn.disabled=false;
   if(error){ alert("Kaydedilemedi: "+error.message); return; }
+  notifyAssign(data, oldT, savedId);
   closeModal(); await loadTasks();
 }
 async function deleteTask(){
@@ -1513,12 +1541,71 @@ async function deleteProducer(){
   closeProducer(); await loadProducers(); renderProducers();
 }
 
+/* bildirimler (inbox) */
+async function loadBildirimler(){
+  if(!me) return;
+  const { data, error } = await sb.from("bildirimler").select("*").eq("user_id", me.id).order("created_at",{ascending:false}).limit(100);
+  if(error){ console.error("bildirimler:", error.message); bildirimler=[]; return; }
+  bildirimler = data || [];
+  updateBellBadge();
+  if(document.getElementById("inboxOverlay").classList.contains("show")) renderBildirimler();
+}
+function unreadCount(){ return bildirimler.filter(n=>!n.okundu).length; }
+function updateBellBadge(){
+  const b=document.getElementById("inboxBadge"); if(!b) return;
+  const c=unreadCount();
+  if(c>0){ b.textContent=c>99?"99+":c; b.style.display="flex"; } else { b.style.display="none"; }
+}
+function openBildirimler(){ renderBildirimler(); document.getElementById("inboxOverlay").classList.add("show"); }
+function closeBildirimler(){ document.getElementById("inboxOverlay").classList.remove("show"); }
+function renderBildirimler(){
+  const el=document.getElementById("inboxList");
+  if(!bildirimler.length){ el.innerHTML=`<div style="color:var(--text-3); font-size:13px; padding:8px 0;">Henüz bildirim yok.</div>`; return; }
+  el.innerHTML=bildirimler.map(n=>`
+    <div class="ntf${n.okundu?"":" unread"}" onclick="openBildirim('${n.id}','${n.is_id||""}')">
+      <div class="ntf-ico">${n.tur==="yorum"?"💬":"📌"}</div>
+      <div style="flex:1; min-width:0;">
+        <div class="ntf-text">${escapeHtml(n.metin)}</div>
+        <div class="ntf-time">${fmtDateTime(n.created_at)}</div>
+      </div>
+      ${n.okundu?"":'<span class="ntf-dot"></span>'}
+    </div>`).join("");
+}
+async function markRead(id){
+  const n=bildirimler.find(x=>x.id===id); if(n && !n.okundu){ n.okundu=true; updateBellBadge(); renderBildirimler();
+    await sb.from("bildirimler").update({ okundu:true }).eq("id",id);
+  }
+}
+async function markAllRead(){
+  const ids=bildirimler.filter(n=>!n.okundu).map(n=>n.id); if(!ids.length) return;
+  bildirimler.forEach(n=>n.okundu=true); updateBellBadge(); renderBildirimler();
+  await sb.from("bildirimler").update({ okundu:true }).in("id",ids);
+}
+async function openBildirim(id, isId){
+  await markRead(id);
+  if(isId){ const t=tasks.find(x=>x.id===isId); if(t){ closeBildirimler(); openEdit(isId); } }
+}
+async function notifyAssign(data, oldT, taskId){
+  if(!taskId) return;
+  const oldA = oldT ? [oldT.manager,oldT.owner,oldT.helper].filter(Boolean) : [];
+  const newA = [data.manager,data.owner,data.helper].filter(Boolean);
+  const added = [...new Set(newA.filter(n=>!oldA.includes(n)))];
+  const seen=new Set(); const rows=[];
+  added.forEach(name=>{
+    const p=peopleRows.find(x=>x.ad===name && x.user_id);
+    if(p && p.user_id!==me.id && !seen.has(p.user_id)){ seen.add(p.user_id);
+      rows.push({ user_id:p.user_id, tur:"atama", metin:`${myName} sana iş atadı: ${data.title}`, is_id:taskId }); }
+  });
+  if(rows.length){ const { error } = await sb.from("bildirimler").insert(rows); if(error) console.error("bildirim:", error.message); }
+}
+
 document.getElementById("overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
 document.getElementById("peopleOverlay").addEventListener("click", e=>{ if(e.target.id==="peopleOverlay") closePeople(); });
 document.getElementById("contactsOverlay").addEventListener("click", e=>{ if(e.target.id==="contactsOverlay") closeContacts(); });
 document.getElementById("adminOverlay").addEventListener("click", e=>{ if(e.target.id==="adminOverlay") closeAdmin(); });
 document.getElementById("prodOverlay").addEventListener("click", e=>{ if(e.target.id==="prodOverlay") closeProducer(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); closeProducer(); } });
+document.getElementById("inboxOverlay").addEventListener("click", e=>{ if(e.target.id==="inboxOverlay") closeBildirimler(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); closeProducer(); closeBildirimler(); } });
 
 boot();
 </script>
