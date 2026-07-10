@@ -317,10 +317,16 @@
 <div class="toolbar" id="finansToolbar" style="display:none;">
   <button class="btn" onclick="toggleSection('isler')">← İşler</button>
   <span style="font-weight:600; font-size:15px;">🏦 Finans</span>
+  <div class="viewtoggle" style="margin-left:6px;">
+    <button class="vt active" id="fvGenel" onclick="setFinansView('genel')">Genel</button>
+    <button class="vt" id="fvAylik" onclick="setFinansView('aylik')">Aylık</button>
+  </div>
   <div class="spacer"></div>
-  <button class="btn" onclick="finansAy(-1)" title="Önceki ay">‹</button>
-  <span id="finansAyLabel" style="font-weight:500; min-width:110px; text-align:center;"></span>
-  <button class="btn" onclick="finansAy(1)" title="Sonraki ay">›</button>
+  <span id="finansMonthNav" style="display:none; align-items:center; gap:8px;">
+    <button class="btn" onclick="finansAy(-1)" title="Önceki ay">‹</button>
+    <span id="finansAyLabel" style="font-weight:500; min-width:110px; text-align:center;"></span>
+    <button class="btn" onclick="finansAy(1)" title="Sonraki ay">›</button>
+  </span>
   <button class="btn btn-primary" onclick="openOdeme()">+ Ödeme</button>
 </div>
 
@@ -603,6 +609,7 @@ let section = "isler";          // "isler" | "ureticiler" | "finans"
 let odemeler = [];
 let editingOdemeId = null;
 let finansMonth = (function(){ const d=new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+let finansView = "genel";       // "genel" | "aylik"
 let hasFinance = false;
 const ODEME_TIPLERI = ["Nakit","Havale / EFT","ÇEK","Senet","Kredi Kartı","Otomatik Ödeme","Diğer"];
 const ODEME_YON = ["Giden","Gelen"];
@@ -1504,7 +1511,7 @@ function toggleSection(s){
   document.getElementById("prodBtn").classList.toggle("btn-primary", s==="ureticiler");
   document.getElementById("finansBtn").classList.toggle("btn-primary", s==="finans");
   if(s==="ureticiler"){ renderProducers(); }
-  else if(s==="finans"){ updateFinansLabel(); renderFinans(); }
+  else if(s==="finans"){ updateFinansLabel(); setFinansView(finansView); }
   else { render(); }
 }
 function prodCardHtml(p){
@@ -1671,7 +1678,39 @@ function odemeRow(o){
     <span class="cal-date" style="color:${giden?'#c0392b':'#0F6E56'}; font-weight:600;">${giden?'−':'+'}${fmtMoney(o.tutar)}</span>
   </div>`;
 }
-function renderFinans(){
+function setFinansView(v){
+  finansView=v;
+  document.getElementById("fvGenel").classList.toggle("active", v==="genel");
+  document.getElementById("fvAylik").classList.toggle("active", v==="aylik");
+  document.getElementById("finansMonthNav").style.display = v==="aylik" ? "inline-flex" : "none";
+  renderFinans();
+}
+function renderFinans(){ if(finansView==="genel") return renderFinansGenel(); return renderFinansAylik(); }
+function renderFinansGenel(){
+  const board=document.getElementById("board"); board.className="";
+  const pend=odemeler.filter(o=>o.durum!=="Ödendi").slice().sort((a,b)=>(a.tarih||"9999-99-99")<(b.tarih||"9999-99-99")?-1:1);
+  const gidenT=pend.filter(o=>o.yon!=="Gelen").reduce((s,o)=>s+Number(o.tutar||0),0);
+  const gelenT=pend.filter(o=>o.yon==="Gelen").reduce((s,o)=>s+Number(o.tutar||0),0);
+  const rows=pend.length ? pend.map(o=>{
+    const giden=o.yon!=="Gelen"; const gec=isOdemeGecikti(o);
+    return `<tr onclick="openOdemeEdit('${o.id}')">
+      <td class="${gec?'td-overdue':''}" style="white-space:nowrap;">${o.tarih?fmtFull(o.tarih):'—'}</td>
+      <td>${escapeHtml(o.baslik||'(ödeme)')}${gec?' <span style="color:#c0392b; font-size:11px;">gecikti</span>':''}</td>
+      <td class="st">${escapeHtml(o.tip||'')}${o.tekrar==='Aylık'?' · aylık':''}</td>
+      <td style="text-align:right; color:${giden?'#c0392b':'#0F6E56'}; font-weight:600; white-space:nowrap;">${giden?'−':'+'}${fmtMoney(o.tutar)}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="4"><div class="list-empty">Bekleyen ödeme yok.</div></td></tr>`;
+  board.innerHTML=`<div class="listwrap">
+    <div style="font-size:13px; color:var(--text-3); margin-bottom:10px;">Tüm bekleyen ödemeler (tarihe göre). Aylık takvim için üstten "Aylık"a geç.</div>
+    <div class="stats" style="grid-template-columns:repeat(2,1fr);">
+      <div class="stat danger"><span class="n" style="font-size:20px;">${fmtMoney(gidenT)}</span><span class="l">Bekleyen toplam giden</span></div>
+      <div class="stat"><span class="n" style="font-size:20px;">${fmtMoney(gelenT)}</span><span class="l">Bekleyen toplam gelen</span></div>
+    </div>
+    <table class="list"><thead><tr><th>Tarih</th><th>Başlık</th><th>Tip</th><th style="text-align:right;">Tutar</th></tr></thead>
+    <tbody>${rows}</tbody></table>
+  </div>`;
+}
+function renderFinansAylik(){
   const board=document.getElementById("board"); board.className="";
   const y=finansMonth.getFullYear(), mo=finansMonth.getMonth();
   const inMonth=odemeler.filter(o=>{ if(!o.tarih) return false; const d=new Date(o.tarih+"T00:00:00"); return d.getFullYear()===y && d.getMonth()===mo; });
