@@ -188,6 +188,16 @@
   .ntf-text { font-size: 13px; line-height: 1.4; }
   .ntf-time { font-size: 11px; color: var(--text-3); margin-top: 2px; }
   .ntf-dot { width: 8px; height: 8px; border-radius: 50%; background: #185FA5; flex: none; margin-top: 5px; }
+  .mg { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .mg-head { display: grid; grid-template-columns: repeat(7, 1fr); background: var(--surface-2); }
+  .mg-head div { padding: 6px 0; text-align: center; font-size: 11px; color: var(--text-2); font-weight: 600; }
+  .mg-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .mg-cell { min-height: 52px; border-top: 1px solid var(--border); border-left: 1px solid var(--border); padding: 4px 5px; display: flex; flex-direction: column; gap: 2px; }
+  .mg-cell:nth-child(7n+1) { border-left: none; }
+  .mg-cell.empty { background: var(--surface-2); }
+  .mg-cell.today { background: var(--color-background-info, #E6F1FB); }
+  .mg-num { font-size: 11px; color: var(--text-2); }
+  .mg-amt { font-size: 10px; color: #c0392b; font-weight: 600; line-height: 1.1; }
   .card .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
   .avatars { display: flex; }
   .avatar { width: 23px; height: 23px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -274,6 +284,7 @@
     <button id="notifBtn" class="btn" onclick="enableNotifications()" style="display:none; padding:6px 11px;" title="Telefon bildirimlerini aç"><span style="font-size:15px">📲</span> Aç</button>
     <div class="me"><span class="name" id="meName"></span><button class="out" onclick="signOut()">çıkış</button></div>
     <button class="btn" id="adminBtn" onclick="openAdmin()" style="display:none;"><span style="font-size:15px">⚙️</span> Yönetim</button>
+    <button class="btn" id="finansBtn" onclick="toggleSection(section==='finans'?'isler':'finans')" style="display:none;"><span style="font-size:15px">🏦</span> Finans</button>
     <button class="btn" id="prodBtn" onclick="toggleSection(section==='ureticiler'?'isler':'ureticiler')"><span style="font-size:15px">🏭</span> Üreticiler</button>
     <button class="btn" onclick="openContacts()"><span style="font-size:15px">📇</span> Kontaklar</button>
     <button class="btn" onclick="openPeople()"><span style="font-size:15px">👥</span> Kişiler</button>
@@ -301,6 +312,16 @@
   <span style="font-weight:600; font-size:15px;">🏭 Üreticiler</span>
   <div class="spacer"></div>
   <button class="btn btn-primary" onclick="openProducer()">+ Üretici</button>
+</div>
+
+<div class="toolbar" id="finansToolbar" style="display:none;">
+  <button class="btn" onclick="toggleSection('isler')">← İşler</button>
+  <span style="font-weight:600; font-size:15px;">🏦 Finans</span>
+  <div class="spacer"></div>
+  <button class="btn" onclick="finansAy(-1)" title="Önceki ay">‹</button>
+  <span id="finansAyLabel" style="font-weight:500; min-width:110px; text-align:center;"></span>
+  <button class="btn" onclick="finansAy(1)" title="Sonraki ay">›</button>
+  <button class="btn btn-primary" onclick="openOdeme()">+ Ödeme</button>
 </div>
 
 <div id="board"></div>
@@ -433,7 +454,10 @@
       <div id="adminMembers" style="margin-bottom:22px;"></div>
 
       <div style="font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:8px;">Adminler</div>
-      <div id="adminPeople"></div>
+      <div id="adminPeople" style="margin-bottom:22px;"></div>
+
+      <div style="font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:8px;">Finans erişimi <span style="font-weight:400; color:var(--text-3);">· 🏦 Finans'ı kimler görsün</span></div>
+      <div id="adminFinance"></div>
 
     </div>
     <div class="modal-foot" style="justify-content:flex-end;"><button class="btn" onclick="closeAdmin()">Kapat</button></div>
@@ -478,6 +502,36 @@
     <div class="modal-foot">
       <button class="link-danger" id="prodDeleteBtn" onclick="deleteProducer()">Sil</button>
       <div style="display:flex; gap:8px;"><button class="btn" onclick="closeProducer()">Vazgeç</button><button class="btn btn-primary" onclick="saveProducer()">Kaydet</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Ödeme modal -->
+<div class="overlay" id="odemeOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="odemeModalTitle">Yeni ödeme</h2><button class="icon-btn" onclick="closeOdeme()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Başlık / açıklama</label><input id="od_baslik" placeholder="ör. Ofis kirası, tedarikçi ödemesi"></div>
+      <div class="row2">
+        <div class="field"><label>Tutar (₺)</label><input id="od_tutar" inputmode="decimal" placeholder="0"></div>
+        <div class="field"><label>Yön</label><select id="od_yon"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Tip</label><select id="od_tip"></select></div>
+        <div class="field"><label>Tekrar</label><select id="od_tekrar"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Tarih</label><input id="od_tarih" type="date"></div>
+        <div class="field"><label>Durum</label><select id="od_durum"></select></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="link-danger" id="odemeDeleteBtn" onclick="deleteOdeme()">Sil</button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-done" id="odemePaidBtn" onclick="markOdendi()" style="display:none;">✓ Ödendi</button>
+        <button class="btn" onclick="closeOdeme()">Vazgeç</button>
+        <button class="btn btn-primary" onclick="saveOdeme()">Kaydet</button>
+      </div>
     </div>
   </div>
 </div>
@@ -545,7 +599,16 @@ let myName = "";
 let editingUrgent = false;
 let prevAssign = {};
 let firstTasksLoad = true;
-let section = "isler";          // "isler" | "ureticiler"
+let section = "isler";          // "isler" | "ureticiler" | "finans"
+let odemeler = [];
+let editingOdemeId = null;
+let finansMonth = (function(){ const d=new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
+let hasFinance = false;
+const ODEME_TIPLERI = ["Nakit","Havale / EFT","ÇEK","Senet","Kredi Kartı","Otomatik Ödeme","Diğer"];
+const ODEME_YON = ["Giden","Gelen"];
+const ODEME_TEKRAR = ["Tek seferlik","Aylık"];
+const ODEME_DURUM = ["Bekliyor","Ödendi"];
+function fmtMoney(n){ return new Intl.NumberFormat("tr-TR",{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+" ₺"; }
 let producers = [];
 let producerFiles = [];
 let editingProducerId = null;
@@ -591,10 +654,12 @@ async function boot() {
   document.body.classList.add("authed");
   await loadPeople();
   isAdmin = (me.email===MASTER_ADMIN) || !!(peopleRows.find(p=>p.user_id===me.id)?.is_admin);
+  hasFinance = (me.email===MASTER_ADMIN) || !!(peopleRows.find(p=>p.user_id===me.id)?.finans);
   document.getElementById("adminBtn").style.display = isAdmin ? "inline-flex" : "none";
+  document.getElementById("finansBtn").style.display = hasFinance ? "inline-flex" : "none";
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadBildirimler(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadBildirimler(), loadOdemeler(), loadTasks()]);
   subscribe();
   initPush();
 }
@@ -757,6 +822,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"ureticiler" }, loadProducers)
     .on("postgres_changes", { event:"*", schema:"public", table:"uretici_dosyalari" }, async()=>{ await loadProducerFiles(); if(editingProducerId) renderProducerFiles(editingProducerId); if(section==="ureticiler") renderProducers(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"bildirimler" }, async()=>{ await loadBildirimler(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"odemeler" }, loadOdemeler)
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"proje_uyeleri" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
@@ -1270,7 +1336,7 @@ function openAdmin(){
   document.getElementById("adminOverlay").classList.add("show");
 }
 function closeAdmin(){ document.getElementById("adminOverlay").classList.remove("show"); }
-function renderAdminAll(){ renderAdminProjects(); buildAdminLineProject(); renderAdminLines(); buildAdminMemberProject(); renderAdminMembers(); renderAdminPeople(); }
+function renderAdminAll(){ renderAdminProjects(); buildAdminLineProject(); renderAdminLines(); buildAdminMemberProject(); renderAdminMembers(); renderAdminPeople(); renderAdminFinance(); }
 
 function renderAdminProjects(){
   const el=document.getElementById("adminProjects");
@@ -1397,6 +1463,24 @@ async function setAdmin(personId, val){
   if(error){ alert("Güncellenemedi: "+error.message); return; }
   await loadPeople(); renderAdminPeople();
 }
+function renderAdminFinance(){
+  const el=document.getElementById("adminFinance");
+  const members=peopleRows.filter(p=>p.user_id).slice().sort((a,b)=>a.ad.localeCompare(b.ad,"tr"));
+  if(!members.length){ el.innerHTML=`<div style="color:var(--text-3); font-size:13px;">Henüz üye yok.</div>`; return; }
+  el.innerHTML=members.map(p=>{
+    const master=p.email===MASTER_ADMIN;
+    const badge=master?`<span style="font-size:11px; color:#534AB7; background:#EEEDFE; padding:3px 9px; border-radius:999px;">her zaman</span>`
+      : p.finans?`<span style="font-size:11px; color:#0F6E56; background:#E1F5EE; padding:3px 9px; border-radius:999px; cursor:pointer;" onclick="setFinance('${p.id}',false)">erişim ✓ (kaldır)</span>`
+      : `<span style="font-size:11px; color:var(--text-3); border:0.5px solid var(--border-2); padding:3px 9px; border-radius:999px; cursor:pointer;" onclick="setFinance('${p.id}',true)">erişim ver</span>`;
+    return `<div style="display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;">${escapeHtml(p.ad)}</span>${badge}</div>`;
+  }).join("");
+}
+async function setFinance(personId, val){
+  const { error } = await sb.from("kisiler").update({ finans: val }).eq("id", personId);
+  if(error){ alert("Güncellenemedi: "+error.message); return; }
+  await loadPeople(); renderAdminFinance();
+}
 
 /* üreticiler */
 async function loadProducers(){
@@ -1412,11 +1496,16 @@ async function loadProducerFiles(){
 }
 function producerFileCount(id){ return producerFiles.filter(f=>f.uretici_id===id).length; }
 function toggleSection(s){
+  if(s==="finans" && !hasFinance){ return; }
   section=s;
   document.getElementById("taskToolbar").style.display = s==="isler" ? "flex" : "none";
   document.getElementById("prodToolbar").style.display = s==="ureticiler" ? "flex" : "none";
+  document.getElementById("finansToolbar").style.display = s==="finans" ? "flex" : "none";
   document.getElementById("prodBtn").classList.toggle("btn-primary", s==="ureticiler");
-  if(s==="ureticiler"){ renderProducers(); } else { render(); }
+  document.getElementById("finansBtn").classList.toggle("btn-primary", s==="finans");
+  if(s==="ureticiler"){ renderProducers(); }
+  else if(s==="finans"){ updateFinansLabel(); renderFinans(); }
+  else { render(); }
 }
 function prodCardHtml(p){
   const done=p.asama==="Red Edildi";
@@ -1541,6 +1630,135 @@ async function deleteProducer(){
   closeProducer(); await loadProducers(); renderProducers();
 }
 
+/* finans */
+async function loadOdemeler(){
+  const { data, error } = await sb.from("odemeler").select("*").order("tarih",{ascending:true});
+  if(error){ console.error("odemeler:", error.message); odemeler=[]; return; }
+  odemeler = data || [];
+  if(section==="finans") renderFinans();
+}
+function isOdemeGecikti(o){ if(o.durum==="Ödendi" || o.yon==="Gelen" || !o.tarih) return false; return new Date(o.tarih+"T23:59:59") < new Date(); }
+function updateFinansLabel(){
+  const aylar=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+  document.getElementById("finansAyLabel").textContent = aylar[finansMonth.getMonth()]+" "+finansMonth.getFullYear();
+}
+function finansAy(delta){ finansMonth=new Date(finansMonth.getFullYear(), finansMonth.getMonth()+delta, 1); updateFinansLabel(); renderFinans(); }
+function monthGridHtml(y, mo, items){
+  const first=new Date(y,mo,1); const startDay=(first.getDay()+6)%7;
+  const daysInMonth=new Date(y,mo+1,0).getDate();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const totalByDay={};
+  items.forEach(o=>{ if(o.yon!=="Gelen"){ const d=new Date(o.tarih+"T00:00:00").getDate(); totalByDay[d]=(totalByDay[d]||0)+Number(o.tutar||0); } });
+  let cells="";
+  for(let i=0;i<startDay;i++) cells+=`<div class="mg-cell empty"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const cur=new Date(y,mo,d);
+    const isToday=cur.getTime()===today.getTime();
+    const amt=totalByDay[d];
+    cells+=`<div class="mg-cell${isToday?' today':''}"><span class="mg-num">${d}</span>${amt?`<span class="mg-amt">${fmtMoney(amt)}</span>`:''}</div>`;
+  }
+  return `<div class="mg"><div class="mg-head">${["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"].map(w=>`<div>${w}</div>`).join("")}</div><div class="mg-grid">${cells}</div></div>`;
+}
+function odemeRow(o){
+  const giden=o.yon!=="Gelen"; const paid=o.durum==="Ödendi"; const gec=isOdemeGecikti(o);
+  const dot=paid?"#1D9E75":(gec?"#c0392b":"#888780");
+  return `<div class="cal-row" onclick="openOdemeEdit('${o.id}')">
+    <span class="dot2" style="background:${dot}"></span>
+    <div style="flex:1; min-width:0;">
+      <div class="cal-title ${paid?'done':''}">${escapeHtml(o.baslik||'(ödeme)')}</div>
+      <div class="cal-sub">${escapeHtml(o.tip||'')}${o.tekrar==='Aylık'?' · aylık':''} · ${o.durum}${gec?' · <span style="color:#c0392b">gecikti</span>':''}</div>
+    </div>
+    <span class="cal-date" style="color:${giden?'#c0392b':'#0F6E56'}; font-weight:600;">${giden?'−':'+'}${fmtMoney(o.tutar)}</span>
+  </div>`;
+}
+function renderFinans(){
+  const board=document.getElementById("board"); board.className="";
+  const y=finansMonth.getFullYear(), mo=finansMonth.getMonth();
+  const inMonth=odemeler.filter(o=>{ if(!o.tarih) return false; const d=new Date(o.tarih+"T00:00:00"); return d.getFullYear()===y && d.getMonth()===mo; });
+  const giden=inMonth.filter(o=>o.yon!=="Gelen").reduce((s,o)=>s+Number(o.tutar||0),0);
+  const gelen=inMonth.filter(o=>o.yon==="Gelen").reduce((s,o)=>s+Number(o.tutar||0),0);
+  const bekleyen=inMonth.filter(o=>o.durum!=="Ödendi" && o.yon!=="Gelen").reduce((s,o)=>s+Number(o.tutar||0),0);
+  const byDay={};
+  inMonth.slice().sort((a,b)=>a.tarih<b.tarih?-1:a.tarih>b.tarih?1:0).forEach(o=>{ (byDay[o.tarih]=byDay[o.tarih]||[]).push(o); });
+  const agenda=Object.keys(byDay).sort().map(date=>`<div class="cal-group">${fmtFull(date)} <span>${byDay[date].length}</span></div>`+byDay[date].map(odemeRow).join("")).join("") || `<div class="list-empty">Bu ay ödeme yok.</div>`;
+  board.innerHTML=`<div class="listwrap">
+    <div class="stats" style="grid-template-columns:repeat(3,1fr);">
+      <div class="stat"><span class="n" style="font-size:20px;">${fmtMoney(giden)}</span><span class="l">Bu ay giden</span></div>
+      <div class="stat"><span class="n" style="font-size:20px;">${fmtMoney(gelen)}</span><span class="l">Bu ay gelen</span></div>
+      <div class="stat danger"><span class="n" style="font-size:20px;">${fmtMoney(bekleyen)}</span><span class="l">Bekleyen (giden)</span></div>
+    </div>
+    ${monthGridHtml(y,mo,inMonth)}
+    <div style="margin-top:16px;">${agenda}</div>
+  </div>`;
+}
+function fillOdemeSelects(){
+  document.getElementById("od_tip").innerHTML=ODEME_TIPLERI.map(t=>`<option>${t}</option>`).join("");
+  document.getElementById("od_yon").innerHTML=ODEME_YON.map(t=>`<option>${t}</option>`).join("");
+  document.getElementById("od_tekrar").innerHTML=ODEME_TEKRAR.map(t=>`<option>${t}</option>`).join("");
+  document.getElementById("od_durum").innerHTML=ODEME_DURUM.map(t=>`<option>${t}</option>`).join("");
+}
+function openOdeme(){
+  editingOdemeId=null;
+  document.getElementById("odemeModalTitle").textContent="Yeni ödeme";
+  document.getElementById("odemeDeleteBtn").style.display="none";
+  document.getElementById("odemePaidBtn").style.display="none";
+  fillOdemeSelects();
+  ["od_baslik","od_tutar"].forEach(id=>setV(id,""));
+  const today=new Date(); setV("od_tarih", today.toISOString().slice(0,10));
+  document.getElementById("od_tip").value="Havale / EFT"; document.getElementById("od_yon").value="Giden";
+  document.getElementById("od_tekrar").value="Tek seferlik"; document.getElementById("od_durum").value="Bekliyor";
+  document.getElementById("odemeOverlay").classList.add("show");
+  setTimeout(()=>document.getElementById("od_baslik").focus(),50);
+}
+function openOdemeEdit(id){
+  const o=odemeler.find(x=>x.id===id); if(!o) return;
+  editingOdemeId=id;
+  document.getElementById("odemeModalTitle").textContent="Ödemeyi düzenle";
+  document.getElementById("odemeDeleteBtn").style.display="inline";
+  fillOdemeSelects();
+  setV("od_baslik",o.baslik); setV("od_tutar",o.tutar);
+  setV("od_tarih",o.tarih);
+  document.getElementById("od_tip").value=o.tip||"Havale / EFT";
+  document.getElementById("od_yon").value=o.yon||"Giden";
+  document.getElementById("od_tekrar").value=o.tekrar||"Tek seferlik";
+  document.getElementById("od_durum").value=o.durum||"Bekliyor";
+  document.getElementById("odemePaidBtn").style.display=(o.durum==="Ödendi"||o.yon==="Gelen")?"none":"inline-flex";
+  document.getElementById("odemeOverlay").classList.add("show");
+}
+function closeOdeme(){ document.getElementById("odemeOverlay").classList.remove("show"); }
+function odemeData(){
+  return { baslik:gv("od_baslik"), tutar:parseFloat(document.getElementById("od_tutar").value)||0,
+    tarih:document.getElementById("od_tarih").value||null, tip:document.getElementById("od_tip").value,
+    yon:document.getElementById("od_yon").value, tekrar:document.getElementById("od_tekrar").value,
+    durum:document.getElementById("od_durum").value };
+}
+async function saveOdeme(){
+  const d=odemeData(); if(!d.baslik && !d.tutar){ document.getElementById("od_baslik").focus(); return; }
+  let error;
+  if(editingOdemeId){ ({error}=await sb.from("odemeler").update(d).eq("id",editingOdemeId)); }
+  else { ({error}=await sb.from("odemeler").insert(d)); }
+  if(error){ alert("Kaydedilemedi: "+error.message); return; }
+  closeOdeme(); await loadOdemeler(); renderFinans();
+}
+async function markOdendi(){
+  if(!editingOdemeId) return;
+  const o=odemeler.find(x=>x.id===editingOdemeId); if(!o) return;
+  const { error } = await sb.from("odemeler").update({ durum:"Ödendi" }).eq("id",editingOdemeId);
+  if(error){ alert("Güncellenemedi: "+error.message); return; }
+  // aylık tekrar → gelecek ay için yeni kayıt
+  if(o.tekrar==="Aylık" && o.tarih){
+    const d=new Date(o.tarih+"T00:00:00"); const next=new Date(d.getFullYear(), d.getMonth()+1, d.getDate());
+    await sb.from("odemeler").insert({ baslik:o.baslik, tutar:o.tutar, tarih:next.toISOString().slice(0,10), tip:o.tip, yon:o.yon, tekrar:"Aylık", durum:"Bekliyor" });
+  }
+  closeOdeme(); await loadOdemeler(); renderFinans();
+}
+async function deleteOdeme(){
+  if(!editingOdemeId) return; if(!confirm("Bu ödeme silinsin mi?")) return;
+  const { error } = await sb.from("odemeler").delete().eq("id",editingOdemeId);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  closeOdeme(); await loadOdemeler(); renderFinans();
+}
+
 /* bildirimler (inbox) */
 async function loadBildirimler(){
   if(!me) return;
@@ -1605,7 +1823,8 @@ document.getElementById("contactsOverlay").addEventListener("click", e=>{ if(e.t
 document.getElementById("adminOverlay").addEventListener("click", e=>{ if(e.target.id==="adminOverlay") closeAdmin(); });
 document.getElementById("prodOverlay").addEventListener("click", e=>{ if(e.target.id==="prodOverlay") closeProducer(); });
 document.getElementById("inboxOverlay").addEventListener("click", e=>{ if(e.target.id==="inboxOverlay") closeBildirimler(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); closeProducer(); closeBildirimler(); } });
+document.getElementById("odemeOverlay").addEventListener("click", e=>{ if(e.target.id==="odemeOverlay") closeOdeme(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); closeProducer(); closeBildirimler(); closeOdeme(); } });
 
 boot();
 </script>
