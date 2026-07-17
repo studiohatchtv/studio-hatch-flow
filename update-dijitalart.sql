@@ -8,6 +8,7 @@ create table if not exists public.basvurular (
   id          uuid primary key default gen_random_uuid(),
   eser_adi    text,
   aciklama    text,
+  donanim     text,                                  -- donanım ihtiyacı
   linkler     text,                                  -- her satırda bir link
   sanatci_id  uuid references public.kontaklar(id) on delete set null,  -- Kontaklar'dan sanatçı
   asama       text not null default 'Başvuru Yaptı', -- Başvuru Yaptı|Değerlendirme|Kabul Edildi|Red Edildi
@@ -15,6 +16,9 @@ create table if not exists public.basvurular (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
+-- daha önce kurulmuşsa donanım kolonunu ekle
+alter table public.basvurular add column if not exists donanim text;
 
 drop trigger if exists trg_basvurular_touch on public.basvurular;
 create trigger trg_basvurular_touch before update on public.basvurular

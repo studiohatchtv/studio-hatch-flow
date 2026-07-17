@@ -202,6 +202,8 @@
   .eser-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .linkchip { display: inline-block; font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--accent); cursor: pointer; white-space: nowrap; }
   .linkchip:hover { background: var(--border); }
+  .linkrow { display: flex; align-items: center; gap: 6px; }
+  .linkrow .linkchip { flex: 1; overflow: hidden; text-overflow: ellipsis; }
   .card .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
   .avatars { display: flex; }
   .avatar { width: 23px; height: 23px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -565,10 +567,14 @@
         <div class="field"><label>Aşama</label><select id="es_asama"></select></div>
       </div>
       <div class="field"><label>Açıklama</label><textarea id="es_aciklama" rows="2" placeholder="teknik, boyut, notlar..." style="resize:vertical; min-height:52px; line-height:1.4;"></textarea></div>
+      <div class="field"><label>Donanım ihtiyacı</label><textarea id="es_donanim" rows="2" placeholder="ör. projeksiyon, ekran, ışık, güç kaynağı..." style="resize:vertical; min-height:52px; line-height:1.4;"></textarea></div>
       <div class="field">
-        <label>Eser linkleri <span style="color:var(--text-3); font-weight:400;">· her satıra bir tane</span></label>
-        <textarea id="es_linkler" rows="2" placeholder="portfolyo / drive / behance linki" style="resize:vertical; min-height:48px; line-height:1.4;" oninput="renderEserLinks()"></textarea>
-        <div id="es_linkChips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
+        <label>Eser linkleri</label>
+        <div style="display:flex; gap:8px;">
+          <input id="es_linkInput" placeholder="portfolyo / drive / behance linki" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addEserLink();}">
+          <button type="button" class="btn" onclick="addEserLink()">Ekle</button>
+        </div>
+        <div id="es_linkChips" style="display:flex; flex-direction:column; gap:6px; margin-top:8px;"></div>
       </div>
       <div class="field">
         <label>Dosyalar / görseller</label>
@@ -654,6 +660,7 @@ let section = "isler";          // "isler" | "ureticiler" | "finans" | "dijitala
 let eserler = [];
 let eserFiles = [];
 let editingEserId = null;
+let currentEserLinks = [];
 const ESER_ASAMALAR = ["Başvuru Yaptı","Değerlendirme","Kabul Edildi","Red Edildi"];
 let odemeler = [];
 let editingOdemeId = null;
@@ -1742,11 +1749,18 @@ function fillEserSelects(){
   document.getElementById("es_sanatci").innerHTML=`<option value="">— seç —</option>`+
     contacts.slice().sort((a,b)=>a.ad.localeCompare(b.ad,"tr")).map(c=>`<option value="${c.id}">${escapeHtml(contactLabel(c))}</option>`).join("");
 }
-function renderEserLinks(){
+function renderEserLinkList(){
   const el=document.getElementById("es_linkChips");
-  const lines=document.getElementById("es_linkler").value.split("\n").map(s=>s.trim()).filter(Boolean);
-  el.innerHTML=lines.map(l=>`<span class="linkchip" onclick="openRawUrl('${escapeHtml(l).replace(/'/g,"\\'")}')">↗ ${escapeHtml(l.length>32?l.slice(0,32)+'…':l)}</span>`).join("");
+  el.innerHTML=currentEserLinks.map((l,i)=>`<div class="linkrow">
+    <span class="linkchip" onclick="openRawUrl('${escapeHtml(l).replace(/'/g,"\\'")}')">↗ ${escapeHtml(l.length>36?l.slice(0,36)+'…':l)}</span>
+    <button type="button" class="icon-btn" title="Kaldır" onclick="removeEserLink(${i})">&times;</button>
+  </div>`).join("");
 }
+function addEserLink(){
+  const inp=document.getElementById("es_linkInput"); const v=inp.value.trim(); if(!v) return;
+  currentEserLinks.push(v); inp.value=""; inp.focus(); renderEserLinkList();
+}
+function removeEserLink(i){ currentEserLinks.splice(i,1); renderEserLinkList(); }
 function openRawUrl(v){ if(!v) return; if(!/^https?:/i.test(v)) v="https://"+v; window.open(v,"_blank","noopener"); }
 function renderEserFiles(id){
   const el=document.getElementById("esFileList");
@@ -1794,9 +1808,10 @@ function openEser(){
   document.getElementById("eserModalTitle").textContent="Yeni eser / başvuru";
   document.getElementById("eserDeleteBtn").style.display="none";
   fillEserSelects();
-  setV("es_ad",""); setV("es_aciklama",""); setV("es_linkler","");
+  setV("es_ad",""); setV("es_aciklama",""); setV("es_donanim","");
+  currentEserLinks=[];
   document.getElementById("es_sanatci").value=""; document.getElementById("es_asama").value="Başvuru Yaptı";
-  renderEserLinks(); setupEserFilesUI();
+  renderEserLinkList(); setupEserFilesUI();
   document.getElementById("eserOverlay").classList.add("show");
   setTimeout(()=>document.getElementById("es_ad").focus(),50);
 }
@@ -1806,16 +1821,17 @@ function openEserEdit(id){
   document.getElementById("eserModalTitle").textContent="Eseri düzenle";
   document.getElementById("eserDeleteBtn").style.display="inline";
   fillEserSelects();
-  setV("es_ad",o.eser_adi); setV("es_aciklama",o.aciklama); setV("es_linkler",o.linkler);
+  setV("es_ad",o.eser_adi); setV("es_aciklama",o.aciklama); setV("es_donanim",o.donanim);
+  currentEserLinks=(o.linkler||"").split("\n").map(s=>s.trim()).filter(Boolean);
   document.getElementById("es_sanatci").value=o.sanatci_id||""; document.getElementById("es_asama").value=o.asama||"Başvuru Yaptı";
-  renderEserLinks(); setupEserFilesUI();
+  renderEserLinkList(); setupEserFilesUI();
   document.getElementById("eserOverlay").classList.add("show");
 }
 function closeEser(){ document.getElementById("eserOverlay").classList.remove("show"); }
 async function saveEser(){
   const ad=document.getElementById("es_ad").value.trim();
   if(!ad){ document.getElementById("es_ad").focus(); return; }
-  const data={ eser_adi:ad, aciklama:gv("es_aciklama"), linkler:gv("es_linkler"),
+  const data={ eser_adi:ad, aciklama:gv("es_aciklama"), donanim:gv("es_donanim"), linkler:currentEserLinks.join("\n")||null,
     sanatci_id:document.getElementById("es_sanatci").value||null, asama:document.getElementById("es_asama").value };
   let error;
   if(editingEserId){ ({error}=await sb.from("basvurular").update(data).eq("id",editingEserId)); }
