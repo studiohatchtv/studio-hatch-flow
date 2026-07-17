@@ -198,6 +198,10 @@
   .mg-cell.today { background: var(--color-background-info, #E6F1FB); }
   .mg-num { font-size: 11px; color: var(--text-2); }
   .mg-amt { font-size: 10px; color: #c0392b; font-weight: 600; line-height: 1.1; }
+  .eser-thumb { width: 100%; height: 110px; border-radius: 8px; overflow: hidden; background: var(--surface-2); margin-bottom: 8px; }
+  .eser-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .linkchip { display: inline-block; font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--accent); cursor: pointer; white-space: nowrap; }
+  .linkchip:hover { background: var(--border); }
   .card .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
   .avatars { display: flex; }
   .avatar { width: 23px; height: 23px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -285,6 +289,7 @@
     <div class="me"><span class="name" id="meName"></span><button class="out" onclick="signOut()">çıkış</button></div>
     <button class="btn" id="adminBtn" onclick="openAdmin()" style="display:none;"><span style="font-size:15px">⚙️</span> Yönetim</button>
     <button class="btn" id="finansBtn" onclick="toggleSection(section==='finans'?'isler':'finans')" style="display:none;"><span style="font-size:15px">🏦</span> Finans</button>
+    <button class="btn" id="eserBtn" onclick="toggleSection(section==='dijitalart'?'isler':'dijitalart')"><span style="font-size:15px">🎨</span> Dijital Art</button>
     <button class="btn" id="prodBtn" onclick="toggleSection(section==='ureticiler'?'isler':'ureticiler')"><span style="font-size:15px">🏭</span> Üreticiler</button>
     <button class="btn" onclick="openContacts()"><span style="font-size:15px">📇</span> Kontaklar</button>
     <button class="btn" onclick="openPeople()"><span style="font-size:15px">👥</span> Kişiler</button>
@@ -312,6 +317,13 @@
   <span style="font-weight:600; font-size:15px;">🏭 Üreticiler</span>
   <div class="spacer"></div>
   <button class="btn btn-primary" onclick="openProducer()">+ Üretici</button>
+</div>
+
+<div class="toolbar" id="eserToolbar" style="display:none;">
+  <button class="btn" onclick="toggleSection('isler')">← İşler</button>
+  <span style="font-weight:600; font-size:15px;">🎨 Dijital Art</span>
+  <div class="spacer"></div>
+  <button class="btn btn-primary" onclick="openEser()">+ Eser / başvuru</button>
 </div>
 
 <div class="toolbar" id="finansToolbar" style="display:none;">
@@ -542,6 +554,39 @@
   </div>
 </div>
 
+<!-- Eser / Dijital Art modal -->
+<div class="overlay" id="eserOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="eserModalTitle">Yeni eser / başvuru</h2><button class="icon-btn" onclick="closeEser()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Eser adı</label><input id="es_ad" placeholder="ör. Kırmızı Seri #3"></div>
+      <div class="row2">
+        <div class="field"><label>Sanatçı <span style="color:var(--text-3); font-weight:400;">· Kontaklar'dan</span></label><select id="es_sanatci"></select></div>
+        <div class="field"><label>Aşama</label><select id="es_asama"></select></div>
+      </div>
+      <div class="field"><label>Açıklama</label><textarea id="es_aciklama" rows="2" placeholder="teknik, boyut, notlar..." style="resize:vertical; min-height:52px; line-height:1.4;"></textarea></div>
+      <div class="field">
+        <label>Eser linkleri <span style="color:var(--text-3); font-weight:400;">· her satıra bir tane</span></label>
+        <textarea id="es_linkler" rows="2" placeholder="portfolyo / drive / behance linki" style="resize:vertical; min-height:48px; line-height:1.4;" oninput="renderEserLinks()"></textarea>
+        <div id="es_linkChips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
+      </div>
+      <div class="field">
+        <label>Dosyalar / görseller</label>
+        <div id="esFileList"></div>
+        <div id="esFileWrap" style="display:none; align-items:center; gap:8px; flex-wrap:wrap;">
+          <input type="file" id="esFileInput" accept="image/*,application/pdf" multiple onchange="onEserFilePick(event)" style="font-size:13px; flex:1; min-width:160px;">
+          <span id="esFileHint" style="font-size:12px; color:var(--text-3);"></span>
+        </div>
+        <div id="esFileNote" style="display:none; font-size:12px; color:var(--text-3);">Dosya eklemek için önce eseri <b>Kaydet</b>, sonra tekrar aç.</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="link-danger" id="eserDeleteBtn" onclick="deleteEser()">Sil</button>
+      <div style="display:flex; gap:8px;"><button class="btn" onclick="closeEser()">Vazgeç</button><button class="btn btn-primary" onclick="saveEser()">Kaydet</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- Bildirimler (inbox) modal -->
 <div class="overlay" id="inboxOverlay">
   <div class="modal" style="max-width: 440px;">
@@ -605,7 +650,11 @@ let myName = "";
 let editingUrgent = false;
 let prevAssign = {};
 let firstTasksLoad = true;
-let section = "isler";          // "isler" | "ureticiler" | "finans"
+let section = "isler";          // "isler" | "ureticiler" | "finans" | "dijitalart"
+let eserler = [];
+let eserFiles = [];
+let editingEserId = null;
+const ESER_ASAMALAR = ["Başvuru Yaptı","Değerlendirme","Kabul Edildi","Red Edildi"];
 let odemeler = [];
 let editingOdemeId = null;
 let finansMonth = (function(){ const d=new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); })();
@@ -666,7 +715,7 @@ async function boot() {
   document.getElementById("finansBtn").style.display = hasFinance ? "inline-flex" : "none";
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadBildirimler(), loadOdemeler(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadTasks()]);
   subscribe();
   initPush();
 }
@@ -830,6 +879,8 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"uretici_dosyalari" }, async()=>{ await loadProducerFiles(); if(editingProducerId) renderProducerFiles(editingProducerId); if(section==="ureticiler") renderProducers(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"bildirimler" }, async()=>{ await loadBildirimler(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"odemeler" }, loadOdemeler)
+    .on("postgres_changes", { event:"*", schema:"public", table:"basvurular" }, loadEserler)
+    .on("postgres_changes", { event:"*", schema:"public", table:"basvuru_dosyalari" }, async()=>{ await loadEserFiles(); if(editingEserId) renderEserFiles(editingEserId); if(section==="dijitalart") renderEserler(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"proje_uyeleri" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
@@ -1508,10 +1559,13 @@ function toggleSection(s){
   document.getElementById("taskToolbar").style.display = s==="isler" ? "flex" : "none";
   document.getElementById("prodToolbar").style.display = s==="ureticiler" ? "flex" : "none";
   document.getElementById("finansToolbar").style.display = s==="finans" ? "flex" : "none";
+  document.getElementById("eserToolbar").style.display = s==="dijitalart" ? "flex" : "none";
   document.getElementById("prodBtn").classList.toggle("btn-primary", s==="ureticiler");
   document.getElementById("finansBtn").classList.toggle("btn-primary", s==="finans");
+  document.getElementById("eserBtn").classList.toggle("btn-primary", s==="dijitalart");
   if(s==="ureticiler"){ renderProducers(); }
   else if(s==="finans"){ updateFinansLabel(); setFinansView(finansView); }
+  else if(s==="dijitalart"){ renderEserler(); }
   else { render(); }
 }
 function prodCardHtml(p){
@@ -1635,6 +1689,145 @@ async function deleteProducer(){
   const { error } = await sb.from("ureticiler").delete().eq("id",editingProducerId);
   if(error){ alert("Silinemedi: "+error.message); return; }
   closeProducer(); await loadProducers(); renderProducers();
+}
+
+/* dijital art — eser başvuruları */
+async function loadEserler(){
+  const { data, error } = await sb.from("basvurular").select("*").order("created_at",{ascending:true});
+  if(error){ console.error("basvurular:", error.message); eserler=[]; return; }
+  eserler = data || [];
+  if(section==="dijitalart") renderEserler();
+}
+async function loadEserFiles(){
+  const { data, error } = await sb.from("basvuru_dosyalari").select("*").order("created_at",{ascending:true});
+  if(error){ console.error("basvuru_dosyalari:", error.message); eserFiles=[]; return; }
+  eserFiles = data || [];
+}
+function eserFileCount(id){ return eserFiles.filter(f=>f.basvuru_id===id).length; }
+function firstEserImage(id){ const f=eserFiles.find(x=>x.basvuru_id===id && (x.tur||"").startsWith("image/")); return f?f.url:null; }
+function eserLinkCount(o){ return (o.linkler||"").split("\n").map(s=>s.trim()).filter(Boolean).length; }
+function eserCardHtml(o){
+  const done=o.asama==="Red Edildi";
+  const img=firstEserImage(o.id);
+  const fc=eserFileCount(o.id); const lc=eserLinkCount(o);
+  return `<div class="card" draggable="true" data-id="${o.id}" ondragstart="onEserDragStart(event,'${o.id}')" ondragend="onDragEnd(event)" onclick="openEserEdit('${o.id}')">
+    ${img?`<div class="eser-thumb"><img src="${img}" alt=""></div>`:""}
+    <div class="title ${done?'done':''}">${escapeHtml(o.eser_adi||'(eser)')}</div>
+    ${o.sanatci_id?`<div class="card-contact">🎨 ${escapeHtml(contactName(o.sanatci_id))}</div>`:""}
+    <div class="meta"><span style="display:flex; gap:6px;">${lc?`<span class="due">🔗 ${lc}</span>`:''}${fc?`<span class="due">📎 ${fc}</span>`:''}</span></div>
+  </div>`;
+}
+function renderEserler(){
+  const board=document.getElementById("board"); board.className="board prod";
+  board.innerHTML=ESER_ASAMALAR.map(st=>{
+    const items=eserler.filter(o=>o.asama===st);
+    const cards=items.map(eserCardHtml).join("")||`<div class="empty-col">— boş —</div>`;
+    const safe=escapeHtml(st).replace(/'/g,"\\'");
+    return `<div class="col" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onEserDrop(event,'${safe}')">
+      <div class="col-head"><span>${st}</span><span class="count">${items.length}</span></div>${cards}</div>`;
+  }).join("");
+}
+let eserDragId=null;
+function onEserDragStart(e,id){ eserDragId=id; e.currentTarget.classList.add("dragging"); e.dataTransfer.effectAllowed="move"; }
+async function onEserDrop(e,asama){
+  e.preventDefault(); e.currentTarget.classList.remove("drag-over");
+  const o=eserler.find(x=>x.id===eserDragId); eserDragId=null;
+  if(o && o.asama!==asama){ o.asama=asama; renderEserler();
+    const { error } = await sb.from("basvurular").update({ asama }).eq("id", o.id);
+    if(error){ alert("Güncellenemedi: "+error.message); loadEserler(); }
+  }
+}
+function fillEserSelects(){
+  document.getElementById("es_asama").innerHTML=ESER_ASAMALAR.map(s=>`<option>${s}</option>`).join("");
+  document.getElementById("es_sanatci").innerHTML=`<option value="">— seç —</option>`+
+    contacts.slice().sort((a,b)=>a.ad.localeCompare(b.ad,"tr")).map(c=>`<option value="${c.id}">${escapeHtml(contactLabel(c))}</option>`).join("");
+}
+function renderEserLinks(){
+  const el=document.getElementById("es_linkChips");
+  const lines=document.getElementById("es_linkler").value.split("\n").map(s=>s.trim()).filter(Boolean);
+  el.innerHTML=lines.map(l=>`<span class="linkchip" onclick="openRawUrl('${escapeHtml(l).replace(/'/g,"\\'")}')">↗ ${escapeHtml(l.length>32?l.slice(0,32)+'…':l)}</span>`).join("");
+}
+function openRawUrl(v){ if(!v) return; if(!/^https?:/i.test(v)) v="https://"+v; window.open(v,"_blank","noopener"); }
+function renderEserFiles(id){
+  const el=document.getElementById("esFileList");
+  const items=eserFiles.filter(f=>f.basvuru_id===id);
+  if(!items.length){ el.innerHTML=""; return; }
+  el.innerHTML=`<div class="filegrid">`+items.map(f=>{
+    const isImg=(f.tur||"").startsWith("image/");
+    const thumb=isImg?`<img src="${f.url}" alt="">`:`<div class="fileicon">📄</div>`;
+    return `<div class="fileitem"><a href="${f.url}" target="_blank" rel="noopener" class="filethumb">${thumb}</a>
+      <div class="filemeta"><span class="filename" title="${escapeHtml(f.ad)}">${escapeHtml(f.ad)}</span>
+      <button class="icon-btn" title="Sil" onclick="deleteEserFile('${f.id}','${(f.yol||'').replace(/'/g,"\\'")}')">&times;</button></div></div>`;
+  }).join("")+`</div>`;
+}
+async function onEserFilePick(e){
+  if(!editingEserId) return;
+  const files=[...e.target.files]; e.target.value="";
+  const hint=document.getElementById("esFileHint");
+  for(const f of files){
+    hint.textContent=`"${f.name}" yükleniyor…`;
+    const isImg=f.type.startsWith("image/"); const blob=isImg?await compressImage(f):f;
+    const safe=f.name.replace(/[^\w.\-]+/g,"_");
+    const path=`basvuru/${editingEserId}/${Date.now()}-${Math.random().toString(36).slice(2,7)}-${safe}`;
+    const { error: upErr } = await sb.storage.from(FILES_BUCKET).upload(path, blob, { contentType:isImg?"image/jpeg":(f.type||"application/octet-stream"), upsert:false });
+    if(upErr){ alert("Yüklenemedi: "+upErr.message); hint.textContent=""; continue; }
+    const url=sb.storage.from(FILES_BUCKET).getPublicUrl(path).data.publicUrl;
+    const { error: insErr } = await sb.from("basvuru_dosyalari").insert({ basvuru_id:editingEserId, ad:f.name, yol:path, url, tur:(isImg?"image/jpeg":f.type), boyut:blob.size });
+    if(insErr){ alert("Kaydedilemedi: "+insErr.message); }
+  }
+  hint.textContent=""; await loadEserFiles(); renderEserFiles(editingEserId); renderEserler();
+}
+async function deleteEserFile(id, yol){
+  if(!confirm("Dosya silinsin mi?")) return;
+  if(yol) await sb.storage.from(FILES_BUCKET).remove([yol]);
+  const { error } = await sb.from("basvuru_dosyalari").delete().eq("id",id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  await loadEserFiles(); renderEserFiles(editingEserId); renderEserler();
+}
+function setupEserFilesUI(){
+  const wrap=document.getElementById("esFileWrap"), note=document.getElementById("esFileNote");
+  if(editingEserId){ wrap.style.display="flex"; note.style.display="none"; renderEserFiles(editingEserId); }
+  else { wrap.style.display="none"; note.style.display="block"; document.getElementById("esFileList").innerHTML=""; }
+}
+function openEser(){
+  editingEserId=null;
+  document.getElementById("eserModalTitle").textContent="Yeni eser / başvuru";
+  document.getElementById("eserDeleteBtn").style.display="none";
+  fillEserSelects();
+  setV("es_ad",""); setV("es_aciklama",""); setV("es_linkler","");
+  document.getElementById("es_sanatci").value=""; document.getElementById("es_asama").value="Başvuru Yaptı";
+  renderEserLinks(); setupEserFilesUI();
+  document.getElementById("eserOverlay").classList.add("show");
+  setTimeout(()=>document.getElementById("es_ad").focus(),50);
+}
+function openEserEdit(id){
+  const o=eserler.find(x=>x.id===id); if(!o) return;
+  editingEserId=id;
+  document.getElementById("eserModalTitle").textContent="Eseri düzenle";
+  document.getElementById("eserDeleteBtn").style.display="inline";
+  fillEserSelects();
+  setV("es_ad",o.eser_adi); setV("es_aciklama",o.aciklama); setV("es_linkler",o.linkler);
+  document.getElementById("es_sanatci").value=o.sanatci_id||""; document.getElementById("es_asama").value=o.asama||"Başvuru Yaptı";
+  renderEserLinks(); setupEserFilesUI();
+  document.getElementById("eserOverlay").classList.add("show");
+}
+function closeEser(){ document.getElementById("eserOverlay").classList.remove("show"); }
+async function saveEser(){
+  const ad=document.getElementById("es_ad").value.trim();
+  if(!ad){ document.getElementById("es_ad").focus(); return; }
+  const data={ eser_adi:ad, aciklama:gv("es_aciklama"), linkler:gv("es_linkler"),
+    sanatci_id:document.getElementById("es_sanatci").value||null, asama:document.getElementById("es_asama").value };
+  let error;
+  if(editingEserId){ ({error}=await sb.from("basvurular").update(data).eq("id",editingEserId)); }
+  else { ({error}=await sb.from("basvurular").insert(data)); }
+  if(error){ alert("Kaydedilemedi: "+error.message); return; }
+  closeEser(); await loadEserler(); renderEserler();
+}
+async function deleteEser(){
+  if(!editingEserId) return; if(!confirm("Bu eser/başvuru silinsin mi?")) return;
+  const { error } = await sb.from("basvurular").delete().eq("id",editingEserId);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  closeEser(); await loadEserler(); renderEserler();
 }
 
 /* finans */
@@ -1863,7 +2056,8 @@ document.getElementById("adminOverlay").addEventListener("click", e=>{ if(e.targ
 document.getElementById("prodOverlay").addEventListener("click", e=>{ if(e.target.id==="prodOverlay") closeProducer(); });
 document.getElementById("inboxOverlay").addEventListener("click", e=>{ if(e.target.id==="inboxOverlay") closeBildirimler(); });
 document.getElementById("odemeOverlay").addEventListener("click", e=>{ if(e.target.id==="odemeOverlay") closeOdeme(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); closeProducer(); closeBildirimler(); closeOdeme(); } });
+document.getElementById("eserOverlay").addEventListener("click", e=>{ if(e.target.id==="eserOverlay") closeEser(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); closeProducer(); closeBildirimler(); closeOdeme(); closeEser(); } });
 
 boot();
 </script>
