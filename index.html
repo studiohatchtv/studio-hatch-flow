@@ -566,6 +566,10 @@
         <div class="field"><label>Sanatçı <span style="color:var(--text-3); font-weight:400;">· Kontaklar'dan</span></label><select id="es_sanatci"></select></div>
         <div class="field"><label>Aşama</label><select id="es_asama"></select></div>
       </div>
+      <div class="field" id="es_disBasvuranField" style="display:none;">
+        <label>Dış başvuran <span style="color:var(--text-3); font-weight:400;">· formu dolduran</span></label>
+        <div id="es_disBasvuran" style="font-size:13px; color:var(--text-2); background:var(--surface-2); border-radius:8px; padding:9px 11px;"></div>
+      </div>
       <div class="field"><label>Açıklama</label><textarea id="es_aciklama" rows="2" placeholder="teknik, boyut, notlar..." style="resize:vertical; min-height:52px; line-height:1.4;"></textarea></div>
       <div class="field"><label>Donanım ihtiyacı</label><textarea id="es_donanim" rows="2" placeholder="ör. projeksiyon, ekran, ışık, güç kaynağı..." style="resize:vertical; min-height:52px; line-height:1.4;"></textarea></div>
       <div class="field">
@@ -1720,7 +1724,7 @@ function eserCardHtml(o){
   return `<div class="card" draggable="true" data-id="${o.id}" ondragstart="onEserDragStart(event,'${o.id}')" ondragend="onDragEnd(event)" onclick="openEserEdit('${o.id}')">
     ${img?`<div class="eser-thumb"><img src="${img}" alt=""></div>`:""}
     <div class="title ${done?'done':''}">${escapeHtml(o.eser_adi||'(eser)')}</div>
-    ${o.sanatci_id?`<div class="card-contact">🎨 ${escapeHtml(contactName(o.sanatci_id))}</div>`:""}
+    ${o.sanatci_id?`<div class="card-contact">🎨 ${escapeHtml(contactName(o.sanatci_id))}</div>`:(o.basvuru_ad?`<div class="card-contact">🎨 ${escapeHtml(o.basvuru_ad)} <span style="color:var(--text-3);">· dış başvuru</span></div>`:"")}
     <div class="meta"><span style="display:flex; gap:6px;">${lc?`<span class="due">🔗 ${lc}</span>`:''}${fc?`<span class="due">📎 ${fc}</span>`:''}</span></div>
   </div>`;
 }
@@ -1811,6 +1815,7 @@ function openEser(){
   setV("es_ad",""); setV("es_aciklama",""); setV("es_donanim","");
   currentEserLinks=[];
   document.getElementById("es_sanatci").value=""; document.getElementById("es_asama").value="Başvuru Yaptı";
+  document.getElementById("es_disBasvuranField").style.display="none";
   renderEserLinkList(); setupEserFilesUI();
   document.getElementById("eserOverlay").classList.add("show");
   setTimeout(()=>document.getElementById("es_ad").focus(),50);
@@ -1824,6 +1829,9 @@ function openEserEdit(id){
   setV("es_ad",o.eser_adi); setV("es_aciklama",o.aciklama); setV("es_donanim",o.donanim);
   currentEserLinks=(o.linkler||"").split("\n").map(s=>s.trim()).filter(Boolean);
   document.getElementById("es_sanatci").value=o.sanatci_id||""; document.getElementById("es_asama").value=o.asama||"Başvuru Yaptı";
+  const dis=[o.basvuru_ad, o.basvuru_email, o.basvuru_tel].filter(Boolean);
+  if(dis.length){ document.getElementById("es_disBasvuran").textContent=dis.join(" · "); document.getElementById("es_disBasvuranField").style.display="block"; }
+  else { document.getElementById("es_disBasvuranField").style.display="none"; }
   renderEserLinkList(); setupEserFilesUI();
   document.getElementById("eserOverlay").classList.add("show");
 }
