@@ -334,6 +334,7 @@
   <div class="viewtoggle" style="margin-left:6px;">
     <button class="vt active" id="fvGenel" onclick="setFinansView('genel')">Genel</button>
     <button class="vt" id="fvAylik" onclick="setFinansView('aylik')">Aylık</button>
+    <button class="vt" id="fvAvans" onclick="setFinansView('avanslar')">Avanslar</button>
   </div>
   <div class="spacer"></div>
   <span id="finansMonthNav" style="display:none; align-items:center; gap:8px;">
@@ -341,7 +342,7 @@
     <span id="finansAyLabel" style="font-weight:500; min-width:110px; text-align:center;"></span>
     <button class="btn" onclick="finansAy(1)" title="Sonraki ay">›</button>
   </span>
-  <button class="btn btn-primary" onclick="openOdeme()">+ Ödeme</button>
+  <button class="btn btn-primary" id="finansAddBtn" onclick="finansAdd()">+ Ödeme</button>
 </div>
 
 <div id="board"></div>
@@ -597,6 +598,26 @@
   </div>
 </div>
 
+<!-- Avans modal -->
+<div class="overlay" id="avansOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="avansModalTitle">Yeni avans</h2><button class="icon-btn" onclick="closeAvans()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Kişi <span style="color:var(--text-3); font-weight:400;">· kime verildi</span></label><input id="av_kisi" list="avansKisiList" placeholder="ör. Musa"><datalist id="avansKisiList"></datalist></div>
+      <div class="row2">
+        <div class="field"><label>Tutar (₺)</label><input id="av_tutar" inputmode="decimal" placeholder="0"></div>
+        <div class="field"><label>Tip</label><select id="av_tip"></select></div>
+      </div>
+      <div class="field"><label>Tarih</label><input id="av_tarih" type="date"></div>
+      <div class="field"><label>Açıklama</label><input id="av_aciklama" placeholder="ör. malzeme alımı için"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="link-danger" id="avansDeleteBtn" onclick="deleteAvans()">Sil</button>
+      <div style="display:flex; gap:8px;"><button class="btn" onclick="closeAvans()">Vazgeç</button><button class="btn btn-primary" onclick="saveAvans()">Kaydet</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- Bildirimler (inbox) modal -->
 <div class="overlay" id="inboxOverlay">
   <div class="modal" style="max-width: 440px;">
@@ -675,6 +696,9 @@ const ODEME_TIPLERI = ["Nakit","Havale / EFT","ÇEK","Senet","Kredi Kartı","Oto
 const ODEME_YON = ["Giden","Gelen"];
 const ODEME_TEKRAR = ["Tek seferlik","Aylık"];
 const ODEME_DURUM = ["Bekliyor","Ödendi"];
+let avanslar = [];
+let editingAvansId = null;
+const AVANS_TIPLERI = ["Nakit","Kredi Kartı","ÇEK","Havale / EFT","Diğer"];
 function fmtMoney(n){ return new Intl.NumberFormat("tr-TR",{maximumFractionDigits:0}).format(Math.round(Number(n)||0))+" ₺"; }
 let producers = [];
 let producerFiles = [];
@@ -726,7 +750,7 @@ async function boot() {
   document.getElementById("finansBtn").style.display = hasFinance ? "inline-flex" : "none";
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadTasks()]);
   subscribe();
   initPush();
 }
@@ -890,6 +914,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"uretici_dosyalari" }, async()=>{ await loadProducerFiles(); if(editingProducerId) renderProducerFiles(editingProducerId); if(section==="ureticiler") renderProducers(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"bildirimler" }, async()=>{ await loadBildirimler(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"odemeler" }, loadOdemeler)
+    .on("postgres_changes", { event:"*", schema:"public", table:"avanslar" }, loadAvanslar)
     .on("postgres_changes", { event:"*", schema:"public", table:"basvurular" }, loadEserler)
     .on("postgres_changes", { event:"*", schema:"public", table:"basvuru_dosyalari" }, async()=>{ await loadEserFiles(); if(editingEserId) renderEserFiles(editingEserId); if(section==="dijitalart") renderEserler(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
@@ -1899,10 +1924,16 @@ function setFinansView(v){
   finansView=v;
   document.getElementById("fvGenel").classList.toggle("active", v==="genel");
   document.getElementById("fvAylik").classList.toggle("active", v==="aylik");
+  document.getElementById("fvAvans").classList.toggle("active", v==="avanslar");
   document.getElementById("finansMonthNav").style.display = v==="aylik" ? "inline-flex" : "none";
+  document.getElementById("finansAddBtn").textContent = v==="avanslar" ? "+ Avans" : "+ Ödeme";
   renderFinans();
 }
-function renderFinans(){ if(finansView==="genel") return renderFinansGenel(); return renderFinansAylik(); }
+function renderFinans(){
+  if(finansView==="avanslar") return renderFinansAvanslar();
+  if(finansView==="genel") return renderFinansGenel();
+  return renderFinansAylik();
+}
 function renderFinansGenel(){
   const board=document.getElementById("board"); board.className="";
   const pend=odemeler.filter(o=>o.durum!=="Ödendi").slice().sort((a,b)=>(a.tarih||"9999-99-99")<(b.tarih||"9999-99-99")?-1:1);
@@ -2015,6 +2046,88 @@ async function deleteOdeme(){
   closeOdeme(); await loadOdemeler(); renderFinans();
 }
 
+/* avanslar */
+async function loadAvanslar(){
+  const { data, error } = await sb.from("avanslar").select("*").order("tarih",{ascending:false});
+  if(error){ console.error("avanslar:", error.message); avanslar=[]; return; }
+  avanslar = data || [];
+  if(section==="finans" && finansView==="avanslar") renderFinans();
+}
+function avansBucket(tip){ return tip==="Nakit"?"nakit": tip==="Kredi Kartı"?"kart": tip==="ÇEK"?"cek":"diger"; }
+function finansAdd(){ if(finansView==="avanslar") openAvans(); else openOdeme(); }
+function renderFinansAvanslar(){
+  const board=document.getElementById("board"); board.className="";
+  const byKisi={};
+  avanslar.forEach(a=>{ const k=(a.kisi||"(isimsiz)").trim(); (byKisi[k]=byKisi[k]||[]).push(a); });
+  const kisiler=Object.keys(byKisi).sort((a,b)=>a.localeCompare(b,"tr"));
+  const g={nakit:0,kart:0,cek:0,diger:0,toplam:0};
+  const sumRows=kisiler.map(k=>{
+    const t={nakit:0,kart:0,cek:0,diger:0};
+    byKisi[k].forEach(a=>{ t[avansBucket(a.tip)]+=Number(a.tutar||0); });
+    const top=t.nakit+t.kart+t.cek+t.diger;
+    g.nakit+=t.nakit; g.kart+=t.kart; g.cek+=t.cek; g.diger+=t.diger; g.toplam+=top;
+    return `<tr><td>${escapeHtml(k)}</td><td style="text-align:right;">${fmtMoney(t.nakit)}</td><td style="text-align:right;">${fmtMoney(t.kart)}</td><td style="text-align:right;">${fmtMoney(t.cek)}</td><td style="text-align:right;">${fmtMoney(t.diger)}</td><td style="text-align:right; font-weight:600;">${fmtMoney(top)}</td></tr>`;
+  }).join("") || `<tr><td colspan="6"><div class="list-empty">Avans kaydı yok.</div></td></tr>`;
+  const detail=kisiler.map(k=>{
+    const rows=byKisi[k].slice().sort((a,b)=>(a.tarih||"")<(b.tarih||"")?1:-1).map(a=>`<div class="cal-row" onclick="openAvansEdit('${a.id}')">
+      <div style="flex:1; min-width:0;"><div class="cal-title">${escapeHtml(a.tip||'')}${a.aciklama?' · '+escapeHtml(a.aciklama):''}</div>
+      <div class="cal-sub">${a.tarih?fmtFull(a.tarih):''}</div></div>
+      <span class="cal-date" style="color:#c0392b; font-weight:600;">−${fmtMoney(a.tutar)}</span></div>`).join("");
+    return `<div class="cal-group">${escapeHtml(k)}</div>${rows}`;
+  }).join("");
+  board.innerHTML=`<div class="listwrap">
+    <div style="font-size:13px; color:var(--text-3); margin-bottom:10px;">Kişiye verilen avanslar — tip bazında toplam. Detay için satıra tıkla.</div>
+    <table class="list"><thead><tr><th>Kişi</th><th style="text-align:right;">Nakit</th><th style="text-align:right;">Kart</th><th style="text-align:right;">ÇEK</th><th style="text-align:right;">Diğer</th><th style="text-align:right;">Toplam</th></tr></thead>
+    <tbody>${sumRows}${kisiler.length?`<tr style="background:var(--surface-2);"><td style="font-weight:600;">TOPLAM</td><td style="text-align:right;">${fmtMoney(g.nakit)}</td><td style="text-align:right;">${fmtMoney(g.kart)}</td><td style="text-align:right;">${fmtMoney(g.cek)}</td><td style="text-align:right;">${fmtMoney(g.diger)}</td><td style="text-align:right; font-weight:600;">${fmtMoney(g.toplam)}</td></tr>`:''}</tbody></table>
+    <div style="margin-top:18px;">${detail}</div>
+  </div>`;
+}
+function fillAvansSelects(){
+  document.getElementById("av_tip").innerHTML=AVANS_TIPLERI.map(t=>`<option>${t}</option>`).join("");
+  const names=[...new Set([...avanslar.map(a=>a.kisi).filter(Boolean), ...peopleNames()])].sort((a,b)=>a.localeCompare(b,"tr"));
+  document.getElementById("avansKisiList").innerHTML=names.map(n=>`<option value="${escapeHtml(n)}">`).join("");
+}
+function openAvans(){
+  editingAvansId=null;
+  document.getElementById("avansModalTitle").textContent="Yeni avans";
+  document.getElementById("avansDeleteBtn").style.display="none";
+  fillAvansSelects();
+  ["av_kisi","av_tutar","av_aciklama"].forEach(id=>setV(id,""));
+  setV("av_tarih", new Date().toISOString().slice(0,10));
+  document.getElementById("av_tip").value="Nakit";
+  document.getElementById("avansOverlay").classList.add("show");
+  setTimeout(()=>document.getElementById("av_kisi").focus(),50);
+}
+function openAvansEdit(id){
+  const a=avanslar.find(x=>x.id===id); if(!a) return;
+  editingAvansId=id;
+  document.getElementById("avansModalTitle").textContent="Avansı düzenle";
+  document.getElementById("avansDeleteBtn").style.display="inline";
+  fillAvansSelects();
+  setV("av_kisi",a.kisi); setV("av_tutar",a.tutar); setV("av_aciklama",a.aciklama); setV("av_tarih",a.tarih);
+  document.getElementById("av_tip").value=a.tip||"Nakit";
+  document.getElementById("avansOverlay").classList.add("show");
+}
+function closeAvans(){ document.getElementById("avansOverlay").classList.remove("show"); }
+async function saveAvans(){
+  const kisi=document.getElementById("av_kisi").value.trim();
+  if(!kisi){ document.getElementById("av_kisi").focus(); return; }
+  const data={ kisi, tutar:parseFloat(document.getElementById("av_tutar").value)||0,
+    tip:document.getElementById("av_tip").value, tarih:document.getElementById("av_tarih").value||null,
+    aciklama:gv("av_aciklama") };
+  let error;
+  if(editingAvansId){ ({error}=await sb.from("avanslar").update(data).eq("id",editingAvansId)); }
+  else { ({error}=await sb.from("avanslar").insert(data)); }
+  if(error){ alert("Kaydedilemedi: "+error.message); return; }
+  closeAvans(); await loadAvanslar(); renderFinans();
+}
+async function deleteAvans(){
+  if(!editingAvansId) return; if(!confirm("Bu avans kaydı silinsin mi?")) return;
+  const { error } = await sb.from("avanslar").delete().eq("id",editingAvansId);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  closeAvans(); await loadAvanslar(); renderFinans();
+}
+
 /* bildirimler (inbox) */
 async function loadBildirimler(){
   if(!me) return;
@@ -2081,7 +2194,8 @@ document.getElementById("prodOverlay").addEventListener("click", e=>{ if(e.targe
 document.getElementById("inboxOverlay").addEventListener("click", e=>{ if(e.target.id==="inboxOverlay") closeBildirimler(); });
 document.getElementById("odemeOverlay").addEventListener("click", e=>{ if(e.target.id==="odemeOverlay") closeOdeme(); });
 document.getElementById("eserOverlay").addEventListener("click", e=>{ if(e.target.id==="eserOverlay") closeEser(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); closeProducer(); closeBildirimler(); closeOdeme(); closeEser(); } });
+document.getElementById("avansOverlay").addEventListener("click", e=>{ if(e.target.id==="avansOverlay") closeAvans(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); closeProducer(); closeBildirimler(); closeOdeme(); closeEser(); closeAvans(); } });
 
 boot();
 </script>
