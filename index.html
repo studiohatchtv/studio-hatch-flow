@@ -437,6 +437,7 @@
     <button class="vt" id="mvUrunler" onclick="setMagazaView('urunler')">Ürünler / Stok</button>
     <button class="vt" id="mvGecmis" onclick="setMagazaView('gecmis')">Satış geçmişi</button>
     <button class="vt" id="mvRapor" onclick="setMagazaView('rapor')">Rapor</button>
+    <button class="vt" id="mvUretici" onclick="setMagazaView('ureticiler')">Üreticiler</button>
   </div>
   <div class="spacer"></div>
   <span id="magazaMonthNav" style="display:none; align-items:center; gap:8px;">
@@ -446,7 +447,7 @@
   </span>
   <button class="btn" id="magazaImportBtn" onclick="document.getElementById('magazaImportFile').click()" style="display:none;">⬆ İçe aktar</button>
   <button class="btn" id="magazaCsvBtn" onclick="magazaCsv()" style="display:none;">⬇ CSV</button>
-  <button class="btn btn-primary" id="magazaAddBtn" onclick="openUrun()">+ Ürün</button>
+  <button class="btn btn-primary" id="magazaAddBtn" onclick="magazaView==='ureticiler'?openProducer():openUrun()">+ Ürün</button>
   <input type="file" id="magazaImportFile" accept=".html,.htm,.json,text/html,application/json" style="display:none;" onchange="magazaImport(event)">
 </div>
 
@@ -588,7 +589,8 @@
   <div class="modal">
     <div class="modal-head"><h2 id="prodModalTitle">Yeni üretici</h2><button class="icon-btn" onclick="closeProducer()">&times;</button></div>
     <div class="modal-body">
-      <div class="field"><label>Mağaza ismi</label><input id="pr_magaza" placeholder="ör. ABC Seramik"></div>
+      <div class="field"><label>Marka / mağaza ismi <span style="color:var(--text-3); font-weight:400;">· ürünlerdeki marka adıyla aynı olmalı</span></label><input id="pr_magaza" placeholder="ör. ABC Seramik"></div>
+      <div id="prUrunLink" class="rh-actions"></div>
       <div class="row2">
         <div class="field"><label>Ürün grubu</label><input id="pr_grup" placeholder="ör. el yapımı seramik"></div>
         <div class="field"><label>Aşama</label><select id="pr_asama"></select></div>
@@ -1162,7 +1164,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"ureticiler" }, loadProducers)
-    .on("postgres_changes", { event:"*", schema:"public", table:"uretici_dosyalari" }, async()=>{ await loadProducerFiles(); if(editingProducerId) renderProducerFiles(editingProducerId); if(section==="ureticiler") renderProducers(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"uretici_dosyalari" }, async()=>{ await loadProducerFiles(); if(editingProducerId) renderProducerFiles(editingProducerId); renderProducers(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"bildirimler" }, async()=>{ await loadBildirimler(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"odemeler" }, loadOdemeler)
     .on("postgres_changes", { event:"*", schema:"public", table:"avanslar" }, loadAvanslar)
@@ -1803,7 +1805,7 @@ async function loadProducers(){
   const { data, error } = await sb.from("ureticiler").select("*").order("created_at",{ascending:true});
   if(error){ console.error("ureticiler:", error.message); producers=[]; return; }
   producers = data || [];
-  if(section==="ureticiler") renderProducers();
+  renderProducers();
   refreshMenu();
 }
 async function loadProducerFiles(){
@@ -1812,8 +1814,9 @@ async function loadProducerFiles(){
   producerFiles = data || [];
 }
 function producerFileCount(id){ return producerFiles.filter(f=>f.uretici_id===id).length; }
-const SECTIONS=["menu","isler","magaza","finans","rehber","dijitalart","ureticiler"];
+const SECTIONS=["menu","isler","magaza","finans","rehber","dijitalart","ureticiler"];   // "ureticiler" → Mağaza içindeki sekme
 function toggleSection(s, fromHistory){
+  if(s==="ureticiler"){ magazaView="ureticiler"; s="magaza"; }
   if(s==="finans" && !hasFinance) s="menu";
   if(s==="magaza" && !hasMagaza) s="menu";
   if(!SECTIONS.includes(s)) s="menu";
@@ -1828,7 +1831,6 @@ function toggleSection(s, fromHistory){
   toggleCart(false);
   window.scrollTo(0,0);
   if(s==="menu"){ renderMenu(); }
-  else if(s==="ureticiler"){ renderProducers(); }
   else if(s==="finans"){ updateFinansLabel(); setFinansView(finansView); }
   else if(s==="dijitalart"){ renderEserler(); }
   else if(s==="magaza"){ updateMagazaLabel(); setMagazaView(magazaView); }
@@ -1859,11 +1861,10 @@ function renderMenu(){
       <div class="ico" style="background:${bg};">${ico}</div><div class="tt">${title}</div><div class="ts">${sub}</div></button>`;
   const tiles=[
     tile("isler","📋","#EEEDFE","İşler", `${mine.length} açık görevin${acil?` · <b style="color:#c0392b">${acil} acil</b>`:""}`, gecTask?`${gecTask} gecikmiş`:""),
-    hasMagaza?tile("magaza","🛍️","#E1F5EE","Mağaza", `Bugün ${bugun.length} satış · ${fmtMoney(bugun.reduce((s,x)=>s+Number(x.toplam||0),0))}`, ""):"",
+    hasMagaza?tile("magaza","🛍️","#E1F5EE","Mağaza", `Bugün ${bugun.length} satış · ${fmtMoney(bugun.reduce((s,x)=>s+Number(x.toplam||0),0))}<br>${producers.length} üretici · ${urunler.length} ürün`, ""):"",
     hasFinance?tile("finans","🏦","#E6F1FB","Finans", `Bekleyen ödeme: ${fmtMoney(bekOd.reduce((s,o)=>s+Number(o.tutar||0),0))}`, gecOd?`${gecOd} gecikmiş`:""):"",
     tile("rehber","📇","#FAEEDA","Rehber", `${contacts.length} kişi / firma · influencer, partner…`, takip?`${takip} takip`:""),
     tile("dijitalart","🎨","#FBEAF0","Dijital Art", `${eserler.length} eser${yeniBas?` · ${yeniBas} yeni başvuru`:""}`, ""),
-    tile("ureticiler","🏭","#F1EFE8","Üreticiler", `${producers.length} üretici`, ""),
     tile("ekip","👥","#EAF3DE","Ekip", `${peopleRows.length} kişi`, "", "openPeople()"),
   ].join("");
   board.innerHTML=`<div class="home">
@@ -1876,16 +1877,34 @@ function prodCardHtml(p){
   const done=p.asama==="Red Edildi";
   const sc=sozlesmeColor(p.sozlesme_durumu);
   const fc=producerFileCount(p.id);
+  const pu=producerUrunleri(p); const pStok=pu.reduce((s,u)=>s+(u.stok||0),0);
   return `<div class="card" draggable="true" data-id="${p.id}" ondragstart="onProdDragStart(event,'${p.id}')" ondragend="onDragEnd(event)" onclick="openProducerEdit('${p.id}')">
     <div class="title ${done?'done':''}">${escapeHtml(p.magaza)}</div>
     ${p.urun_grubu?`<div class="card-contact">${escapeHtml(p.urun_grubu)}</div>`:""}
+    ${pu.length?`<div class="card-contact">📦 ${pu.length} ürün · ${pStok} stok</div>`:""}
     ${sc?`<div style="margin-top:6px;"><span class="tag" style="background:${sc.bg};color:${sc.fg}">${escapeHtml(p.sozlesme_durumu)}</span></div>`:""}
     <div class="meta"><span style="display:flex; gap:6px;">${p.instagram?'<span class="due">IG</span>':''}${p.website?'<span class="due">web</span>':''}${fc?`<span class="due">📎 ${fc}</span>`:''}</span>${p.kisi1_ad?`<span class="due">${escapeHtml(p.kisi1_ad)}</span>`:""}</div>
   </div>`;
 }
+function markaKey(s){ return String(s||"").toLocaleLowerCase("tr").replace(/\s+/g," ").trim(); }
+function producerUrunleri(p){ const k=markaKey(p.magaza); return urunler.filter(u=>markaKey(u.marka)===k); }
+function eksikUreticiMarkalar(){ const var_=new Set(producers.map(p=>markaKey(p.magaza))); return markalar().filter(m=>!var_.has(markaKey(m))); }
+async function ekleEksikUreticiler(){
+  const eksik=eksikUreticiMarkalar(); if(!eksik.length) return;
+  if(!confirm(`Mağazada ürünü olan ${eksik.length} marka üretici olarak eklensin mi?\n${eksik.join(", ")}\n\nAşama: “Ürün Tedariği Başladı”`)) return;
+  const { error } = await sb.from("ureticiler").insert(eksik.map(m=>({ magaza:m, asama:"Ürün Tedariği Başladı" })));
+  if(error){ alert("Eklenemedi: "+error.message); return; }
+  await loadProducers();
+}
+function urunlereGit(marka){ closeProducer(); mgMarka=urunler.find(u=>markaKey(u.marka)===markaKey(marka))?.marka||marka; mgSearch=""; mgStok="all"; setMagazaView("urunler"); }
 function renderProducers(){
+  if(!(section==="magaza" && magazaView==="ureticiler")) return;
   const board=document.getElementById("board"); board.className="board prod";
-  board.innerHTML=UASAMALAR.map(st=>{
+  const eksik=hasMagaza?eksikUreticiMarkalar():[];
+  board.innerHTML=(eksik.length?`<div class="mg-warn" style="grid-column:1/-1; margin:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <span style="flex:1; min-width:200px;">Mağazada ürünü olan <b>${eksik.length}</b> marka burada kayıtlı değil: ${eksik.map(escapeHtml).join(", ")}</span>
+      <button class="btn" style="font-size:13px; padding:5px 10px;" onclick="ekleEksikUreticiler()">Üretici olarak ekle</button></div>`:"")+
+  UASAMALAR.map(st=>{
     const items=producers.filter(p=>p.asama===st);
     const cards=items.map(prodCardHtml).join("")||`<div class="empty-col">— boş —</div>`;
     const safe=escapeHtml(st).replace(/'/g,"\\'");
@@ -1953,6 +1972,7 @@ function setupProducerFilesUI(){
 function openProducer(){
   editingProducerId=null;
   document.getElementById("prodModalTitle").textContent="Yeni üretici";
+  document.getElementById("prUrunLink").innerHTML="";
   document.getElementById("prodDeleteBtn").style.display="none";
   fillStageSelect(); fillSozlesmeSelect();
   ["pr_magaza","pr_grup","pr_ig","pr_web","pr_k1ad","pr_k1tel","pr_k2ad","pr_k2tel"].forEach(id=>setV(id,""));
@@ -1966,6 +1986,8 @@ function openProducerEdit(id){
   const p=producers.find(x=>x.id===id); if(!p) return;
   editingProducerId=id;
   document.getElementById("prodModalTitle").textContent="Üreticiyi düzenle";
+  { const pu=producerUrunleri(p); const satis=satislar.filter(s=>!s.iptal && satisInMonth(s)).flatMap(s=>s.kalemler||[]).filter(k=>markaKey(k.marka)===markaKey(p.magaza)).reduce((a,k)=>a+k.adet*k.fiyat,0);
+    document.getElementById("prUrunLink").innerHTML = hasMagaza && pu.length ? `<a href="#" onclick="event.preventDefault(); urunlereGit(${escapeHtml(JSON.stringify(p.magaza))})">📦 ${pu.length} ürün · ${pu.reduce((s,u)=>s+(u.stok||0),0)} stok →</a>${satis?`<a href="#" onclick="event.preventDefault(); closeProducer(); setMagazaView('rapor')">Bu ay satış: ${fmtMoney(satis)} →</a>`:""}` : ""; }
   document.getElementById("prodDeleteBtn").style.display="inline";
   fillStageSelect(); fillSozlesmeSelect();
   setV("pr_magaza",p.magaza); setV("pr_grup",p.urun_grubu); setV("pr_ig",p.instagram); setV("pr_web",p.website);
@@ -2675,6 +2697,7 @@ function refreshMagaza(){
   if(section!=="magaza") return;
   if(magazaView==="satis" && document.getElementById("mgCards")){ renderMgCards(); renderMgCart(); return; }
   if(magazaView==="urunler" && document.getElementById("mgUrunTable")){ renderUrunTable(); return; }
+  if(magazaView==="ureticiler") return;   // üretici panosu ürün değişince yeniden çizilmesin (sürükle-bırak bozulmasın)
   renderMagaza();
 }
 function fmtMoney2(n){ return new Intl.NumberFormat("tr-TR",{minimumFractionDigits:2, maximumFractionDigits:2}).format(Number(n)||0)+" ₺"; }
@@ -2709,17 +2732,19 @@ function magazaSetupBox(){
 }
 function setMagazaView(v){
   magazaView=v;
-  [["satis","mvSatis"],["urunler","mvUrunler"],["gecmis","mvGecmis"],["rapor","mvRapor"]].forEach(([k,id])=>document.getElementById(id).classList.toggle("active", v===k));
+  [["satis","mvSatis"],["urunler","mvUrunler"],["gecmis","mvGecmis"],["rapor","mvRapor"],["ureticiler","mvUretici"]].forEach(([k,id])=>document.getElementById(id).classList.toggle("active", v===k));
   document.getElementById("magazaMonthNav").style.display = (v==="gecmis"||v==="rapor") ? "inline-flex" : "none";
-  document.getElementById("magazaCsvBtn").style.display = v!=="satis" ? "inline-flex" : "none";
+  document.getElementById("magazaCsvBtn").style.display = (v!=="satis" && v!=="ureticiler") ? "inline-flex" : "none";
   document.getElementById("magazaImportBtn").style.display = (v==="urunler" && isAdmin) ? "inline-flex" : "none";
-  document.getElementById("magazaAddBtn").style.display = (v==="satis"||v==="urunler") ? "inline-flex" : "none";
+  document.getElementById("magazaAddBtn").style.display = (v==="satis"||v==="urunler"||v==="ureticiler") ? "inline-flex" : "none";
+  document.getElementById("magazaAddBtn").textContent = v==="ureticiler" ? "+ Üretici" : "+ Ürün";
   renderMagaza();
 }
 function renderMagaza(){
   if(magazaView==="urunler") return renderMagazaUrunler();
   if(magazaView==="gecmis") return renderMagazaGecmis();
   if(magazaView==="rapor") return renderMagazaRapor();
+  if(magazaView==="ureticiler") return renderProducers();
   return renderMagazaSatis();
 }
 
