@@ -204,6 +204,41 @@
   .linkchip:hover { background: var(--border); }
   .linkrow { display: flex; align-items: center; gap: 6px; }
   .linkrow .linkchip { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  /* ana menü */
+  .home { padding: 22px 22px 40px; max-width: 980px; margin: 0 auto; }
+  .home-hi { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .home-sub { color: var(--text-2); font-size: 14px; margin-bottom: 20px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 18px 16px; text-align: left;
+    cursor: pointer; box-shadow: var(--shadow); font-family: inherit; color: var(--text); display: flex; flex-direction: column; gap: 6px;
+    min-height: 132px; transition: border-color .12s, transform .08s; position: relative; }
+  .tile:hover { border-color: var(--border-2); }
+  .tile:active { transform: scale(.985); }
+  .tile .ico { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 23px; margin-bottom: 4px; }
+  .tile .tt { font-size: 16px; font-weight: 600; }
+  .tile .ts { font-size: 12.5px; color: var(--text-2); line-height: 1.4; }
+  .tile .tb { position: absolute; top: 14px; right: 14px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #fceeee; color: #c0392b; }
+  @media (max-width: 760px) {
+    .home { padding: 16px 16px 40px; }
+    .tiles { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+    .tile { min-height: 120px; padding: 14px; }
+  }
+  /* rehber */
+  .rh-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .rh-actions:empty { display: none; }
+  .rh-actions a { font-size: 13px; text-decoration: none; color: var(--accent); background: var(--surface-2); padding: 6px 11px; border-radius: 999px; }
+  .rh-addlog { display: grid; grid-template-columns: 130px 140px 110px 1fr auto; gap: 6px; margin-bottom: 8px; }
+  .rh-addlog input, .rh-addlog select { border: 1px solid var(--border-2); border-radius: 8px; padding: 8px 9px; font-size: 14px; font-family: inherit; color: var(--text); background: var(--surface); min-width: 0; }
+  .rh-log { display: flex; gap: 10px; padding: 8px 2px; border-bottom: 1px solid var(--border); font-size: 13px; align-items: flex-start; }
+  .rh-log .d { color: var(--text-3); font-size: 12px; white-space: nowrap; min-width: 70px; }
+  .rh-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .rh-tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); margin: 2px 3px 0 0; }
+  .rh-soc { font-size: 12px; color: var(--accent); text-decoration: none; margin-right: 8px; white-space: nowrap; }
+  @media (max-width: 760px) {
+    .rh-addlog { grid-template-columns: 1fr 1fr; }
+    .rh-addlog #kl_metin { grid-column: 1 / -1; }
+    .hide-m { display: none; }
+  }
   /* mağaza */
   .mg-layout { display: grid; grid-template-columns: minmax(0,1fr) 340px; gap: 16px; align-items: start; }
   .mg-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -334,7 +369,7 @@
 <!-- APP -->
 <div id="app">
 <header>
-  <div class="brand">
+  <div class="brand" onclick="toggleSection('menu')" style="cursor:pointer;" title="Ana menü">
     <div class="dot">M</div>
     <div><h1>MizarLabs Flow <small>iş takip</small></h1></div>
   </div>
@@ -343,17 +378,11 @@
     <button id="notifBtn" class="btn" onclick="enableNotifications()" style="display:none; padding:6px 11px;" title="Telefon bildirimlerini aç"><span style="font-size:15px">📲</span> Aç</button>
     <div class="me"><span class="name" id="meName"></span><button class="out" onclick="signOut()">çıkış</button></div>
     <button class="btn" id="adminBtn" onclick="openAdmin()" style="display:none;"><span style="font-size:15px">⚙️</span> Yönetim</button>
-    <button class="btn" id="finansBtn" onclick="toggleSection(section==='finans'?'isler':'finans')" style="display:none;"><span style="font-size:15px">🏦</span> Finans</button>
-    <button class="btn" id="magazaBtn" onclick="toggleSection(section==='magaza'?'isler':'magaza')" style="display:none;"><span style="font-size:15px">🛍️</span> Mağaza</button>
-    <button class="btn" id="eserBtn" onclick="toggleSection(section==='dijitalart'?'isler':'dijitalart')"><span style="font-size:15px">🎨</span> Dijital Art</button>
-    <button class="btn" id="prodBtn" onclick="toggleSection(section==='ureticiler'?'isler':'ureticiler')"><span style="font-size:15px">🏭</span> Üreticiler</button>
-    <button class="btn" onclick="openContacts()"><span style="font-size:15px">📇</span> Kontaklar</button>
-    <button class="btn" onclick="openPeople()"><span style="font-size:15px">👥</span> Kişiler</button>
-    <button class="btn btn-primary" onclick="openNew()">+ Yeni iş</button>
   </div>
 </header>
 
 <div class="toolbar" id="taskToolbar">
+  <button class="btn" onclick="toggleSection('menu')">← Menü</button>
   <select id="projectSelect" onchange="switchProject(this.value)" style="font-weight:500;"></select>
   <div class="chips" id="lineChips"></div>
   <div class="spacer"></div>
@@ -366,24 +395,25 @@
   </div>
   <select id="personFilter" onchange="render()"><option value="">Herkes</option></select>
   <button class="btn" onclick="exportExcel()"><span style="font-size:14px">⬇</span> Excel'e aktar</button>
+  <button class="btn btn-primary" onclick="openNew()">+ Yeni iş</button>
 </div>
 
 <div class="toolbar" id="prodToolbar" style="display:none;">
-  <button class="btn" onclick="toggleSection('isler')">← İşler</button>
+  <button class="btn" onclick="toggleSection('menu')">← Menü</button>
   <span style="font-weight:600; font-size:15px;">🏭 Üreticiler</span>
   <div class="spacer"></div>
   <button class="btn btn-primary" onclick="openProducer()">+ Üretici</button>
 </div>
 
 <div class="toolbar" id="eserToolbar" style="display:none;">
-  <button class="btn" onclick="toggleSection('isler')">← İşler</button>
+  <button class="btn" onclick="toggleSection('menu')">← Menü</button>
   <span style="font-weight:600; font-size:15px;">🎨 Dijital Art</span>
   <div class="spacer"></div>
   <button class="btn btn-primary" onclick="openEser()">+ Eser / başvuru</button>
 </div>
 
 <div class="toolbar" id="finansToolbar" style="display:none;">
-  <button class="btn" onclick="toggleSection('isler')">← İşler</button>
+  <button class="btn" onclick="toggleSection('menu')">← Menü</button>
   <span style="font-weight:600; font-size:15px;">🏦 Finans</span>
   <div class="viewtoggle" style="margin-left:6px;">
     <button class="vt active" id="fvGenel" onclick="setFinansView('genel')">Genel</button>
@@ -400,7 +430,7 @@
 </div>
 
 <div class="toolbar" id="magazaToolbar" style="display:none;">
-  <button class="btn" onclick="toggleSection('isler')">← İşler</button>
+  <button class="btn" onclick="toggleSection('menu')">← Menü</button>
   <span style="font-weight:600; font-size:15px;">🛍️ Mağaza</span>
   <div class="viewtoggle" style="margin-left:6px;">
     <button class="vt active" id="mvSatis" onclick="setMagazaView('satis')">Satış</button>
@@ -418,6 +448,18 @@
   <button class="btn" id="magazaCsvBtn" onclick="magazaCsv()" style="display:none;">⬇ CSV</button>
   <button class="btn btn-primary" id="magazaAddBtn" onclick="openUrun()">+ Ürün</button>
   <input type="file" id="magazaImportFile" accept=".html,.htm,.json,text/html,application/json" style="display:none;" onchange="magazaImport(event)">
+</div>
+
+<div class="toolbar" id="rehberToolbar" style="display:none;">
+  <button class="btn" onclick="toggleSection('menu')">← Menü</button>
+  <span style="font-weight:600; font-size:15px;">📇 Rehber</span>
+  <div class="viewtoggle" style="margin-left:6px;">
+    <button class="vt active" id="rvListe" onclick="setRehberView('liste')">Liste</button>
+    <button class="vt" id="rvTakip" onclick="setRehberView('takip')">Takip <span id="rvTakipN"></span></button>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" onclick="rehberCsv()">⬇ CSV</button>
+  <button class="btn btn-primary" onclick="openKontak()">+ Kişi / firma</button>
 </div>
 
 <div id="board"></div>
@@ -498,29 +540,6 @@
   </div>
 </div>
 
-<!-- Contacts modal -->
-<div class="overlay" id="contactsOverlay">
-  <div class="modal" style="max-width: 460px;">
-    <div class="modal-head"><h2 id="contactsTitle">Kontaklar</h2><button class="icon-btn" onclick="closeContacts()">&times;</button></div>
-    <div class="modal-body">
-      <div class="row2">
-        <div class="field"><label>Ad / kişi</label><input id="c_ad" placeholder="ör. Mehmet Demir"></div>
-        <div class="field"><label>Firma</label><input id="c_firma" placeholder="ör. ABC Işık"></div>
-      </div>
-      <div class="row2">
-        <div class="field"><label>Telefon</label><input id="c_tel" placeholder="05xx ..."></div>
-        <div class="field"><label>E-posta</label><input id="c_email"></div>
-      </div>
-      <div class="field"><label>Not</label><input id="c_not" placeholder="ör. ışık tedarikçisi"></div>
-      <div style="display:flex; gap:8px; justify-content:flex-end; margin-bottom:14px;">
-        <button class="btn" id="cCancelEdit" onclick="resetContactForm()" style="display:none;">Vazgeç</button>
-        <button class="btn btn-primary" id="cSaveBtn" onclick="saveContact()">Ekle</button>
-      </div>
-      <div id="contactsList"></div>
-    </div>
-    <div class="modal-foot" style="justify-content:flex-end;"><button class="btn" onclick="closeContacts()">Kapat</button></div>
-  </div>
-</div>
 
 <!-- Admin (Yönetim) modal -->
 <div class="overlay" id="adminOverlay">
@@ -768,6 +787,67 @@
   </div>
 </div>
 
+<!-- Rehber kişi / firma modal -->
+<div class="overlay" id="kontakOverlay">
+  <div class="modal" style="max-width:620px;">
+    <div class="modal-head"><h2 id="kontakModalTitle">Yeni kişi / firma</h2><button class="icon-btn" onclick="closeKontak()">&times;</button></div>
+    <div class="modal-body">
+      <div id="kn_actions" class="rh-actions"></div>
+      <div class="row2">
+        <div class="field"><label>Ad soyad / hesap adı</label><input id="kn_ad" placeholder="ör. Ayşe Yılmaz"></div>
+        <div class="field"><label>Firma / marka</label><input id="kn_firma" placeholder="ör. ABC Ajans"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Kategori</label><select id="kn_kategori"></select></div>
+        <div class="field"><label>Durum</label><select id="kn_durum"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Telefon</label><input id="kn_tel" inputmode="tel" placeholder="05xx ..."></div>
+        <div class="field"><label>E-posta</label><input id="kn_email" inputmode="email"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Instagram</label><input id="kn_ig" placeholder="@kullanici"></div>
+        <div class="field"><label>TikTok</label><input id="kn_tt" placeholder="@kullanici"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>YouTube</label><input id="kn_yt" placeholder="kanal linki"></div>
+        <div class="field"><label>Website</label><input id="kn_web" placeholder="site.com"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Takipçi sayısı</label><input id="kn_takipci" inputmode="numeric" placeholder="ör. 125000"></div>
+        <div class="field"><label>Şehir</label><input id="kn_sehir" placeholder="ör. İstanbul"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Ünvan / rol</label><input id="kn_unvan" placeholder="ör. Pazarlama müdürü"></div>
+        <div class="field"><label>Ücret / fiyat notu</label><input id="kn_ucret" placeholder="ör. Reels 15.000 ₺"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Sorumlu <span style="color:var(--text-3); font-weight:400;">· ilişkiyi takip eden</span></label><select id="kn_sorumlu"></select></div>
+        <div class="field"><label>Sonraki takip tarihi</label><input id="kn_sonraki" type="date"></div>
+      </div>
+      <div class="field"><label>Etiketler <span style="color:var(--text-3); font-weight:400;">· virgülle ayır</span></label><input id="kn_etiket" list="knEtiketList" placeholder="ör. moda, seramik, Frida"><datalist id="knEtiketList"></datalist></div>
+      <div class="field"><label>Notlar</label><textarea id="kn_not" rows="2" style="resize:vertical; min-height:52px; line-height:1.4;"></textarea></div>
+
+      <div id="kn_gecmisWrap" style="display:none;">
+        <div style="font-size:13px; font-weight:600; color:var(--text-2); margin:16px 0 8px;">Görüşme / iş birliği geçmişi</div>
+        <div class="rh-addlog">
+          <select id="kl_tur"></select>
+          <input id="kl_tarih" type="date">
+          <input id="kl_tutar" inputmode="decimal" placeholder="tutar (ops.)">
+          <input id="kl_metin" placeholder="ne konuşuldu / ne yapıldı?" onkeydown="if(event.key==='Enter'){event.preventDefault();addKayit();}">
+          <button class="btn" onclick="addKayit()">Ekle</button>
+        </div>
+        <div id="kn_kayitlar"></div>
+        <div id="kn_bagli"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="link-danger" id="kontakDeleteBtn" onclick="deleteKontak()">Sil</button>
+      <div style="display:flex; gap:8px;"><button class="btn" onclick="closeKontak()">Vazgeç</button><button class="btn btn-primary" onclick="saveKontak()">Kaydet</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- Bildirimler (inbox) modal -->
 <div class="overlay" id="inboxOverlay">
   <div class="modal" style="max-width: 440px;">
@@ -831,7 +911,7 @@ let myName = "";
 let editingUrgent = false;
 let prevAssign = {};
 let firstTasksLoad = true;
-let section = "isler";          // "isler" | "ureticiler" | "finans" | "dijitalart" | "magaza"
+let section = "menu";           // "menu" | "isler" | "ureticiler" | "finans" | "dijitalart" | "magaza" | "rehber"
 let hasMagaza = false;
 let urunler = [];
 let satislar = [];
@@ -915,12 +995,11 @@ async function boot() {
   isAdmin = (me.email===MASTER_ADMIN) || !!(peopleRows.find(p=>p.user_id===me.id)?.is_admin);
   hasFinance = (me.email===MASTER_ADMIN) || !!(peopleRows.find(p=>p.user_id===me.id)?.finans);
   document.getElementById("adminBtn").style.display = isAdmin ? "inline-flex" : "none";
-  document.getElementById("finansBtn").style.display = hasFinance ? "inline-flex" : "none";
   hasMagaza = isAdmin || hasFinance || !!(peopleRows.find(p=>p.user_id===me.id)?.magaza);
-  document.getElementById("magazaBtn").style.display = hasMagaza ? "inline-flex" : "none";
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadKayitlar(), loadTasks()]);
+  toggleSection(SECTIONS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "menu", true);
   subscribe();
   initPush();
 }
@@ -1006,7 +1085,7 @@ async function loadTasks(){
   if (error) { console.error(error); alert("İşler yüklenemedi: " + error.message); return; }
   tasks = (data||[]).map(rowToTask);
   detectNewAssignments();
-  render();
+  render(); refreshMenu();
 }
 function detectNewAssignments(){
   const newMap={}; const toToast=[];
@@ -1032,12 +1111,13 @@ async function loadPeople(){
   const { data, error } = await sb.from("kisiler").select("*").order("ad", { ascending: true });
   if (error) { console.error(error); return; }
   peopleRows = data || [];
-  refreshPeople();
+  refreshPeople(); refreshMenu();
 }
 async function loadContacts(){
   const { data, error } = await sb.from("kontaklar").select("*").order("ad", { ascending: true });
   if (error) { console.error("kontaklar:", error.message); contacts=[]; return; }
   contacts = data || [];
+  refreshMenu();
 }
 async function loadFiles(){
   const { data, error } = await sb.from("is_dosyalari").select("*").order("created_at",{ascending:true});
@@ -1077,7 +1157,8 @@ function subscribe(){
   sb.channel("flow")
     .on("postgres_changes", { event:"*", schema:"public", table:"isler" }, loadTasks)
     .on("postgres_changes", { event:"*", schema:"public", table:"kisiler" }, loadPeople)
-    .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, loadContacts)
+    .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, async()=>{ await loadContacts(); refreshRehber(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"kontak_kayitlari" }, async()=>{ await loadKayitlar(); refreshRehber(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"ureticiler" }, loadProducers)
@@ -1543,55 +1624,6 @@ async function removePerson(id){
   await loadPeople(); renderPeopleList();
 }
 
-/* contacts */
-function openContacts(){ resetContactForm(); renderContactsList(); document.getElementById("contactsOverlay").classList.add("show"); setTimeout(()=>document.getElementById("c_ad").focus(),50); }
-function closeContacts(){ document.getElementById("contactsOverlay").classList.remove("show"); }
-function resetContactForm(){
-  editingContactId=null;
-  ["c_ad","c_firma","c_tel","c_email","c_not"].forEach(id=>document.getElementById(id).value="");
-  document.getElementById("cSaveBtn").textContent="Ekle";
-  document.getElementById("cCancelEdit").style.display="none";
-}
-function renderContactsList(){
-  const el=document.getElementById("contactsList");
-  if(!contacts.length){ el.innerHTML=`<div style="color:var(--text-3); font-size:13px; padding:8px 0;">Henüz kontak yok.</div>`; return; }
-  el.innerHTML=contacts.slice().sort((a,b)=>a.ad.localeCompare(b.ad,"tr")).map(c=>`
-    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 4px; border-bottom:1px solid var(--border); gap:8px;">
-      <div style="min-width:0;">
-        <div style="font-size:14px;">${escapeHtml(c.ad)}${c.firma?` <span style="color:var(--text-3); font-size:12px;">· ${escapeHtml(c.firma)}</span>`:""}</div>
-        <div style="font-size:12px; color:var(--text-3);">${[c.telefon,c.email,c.notlar].filter(Boolean).map(escapeHtml).join(" · ")}</div>
-      </div>
-      <div style="white-space:nowrap;">
-        <button class="icon-btn" title="Düzenle" style="font-size:15px;" onclick="editContact('${c.id}')">✎</button>
-        <button class="icon-btn" title="Sil" onclick="deleteContact('${c.id}')">&times;</button>
-      </div>
-    </div>`).join("");
-}
-function editContact(id){
-  const c=contactById(id); if(!c) return;
-  editingContactId=id;
-  set("c_ad",c.ad); set("c_firma",c.firma); set("c_tel",c.telefon); set("c_email",c.email); set("c_not",c.notlar);
-  document.getElementById("cSaveBtn").textContent="Kaydet";
-  document.getElementById("cCancelEdit").style.display="inline-flex";
-  document.getElementById("c_ad").focus();
-}
-async function saveContact(){
-  const ad=get("c_ad"); if(!ad){ document.getElementById("c_ad").focus(); return; }
-  const data={ ad, firma:get("c_firma")||null, telefon:get("c_tel")||null, email:get("c_email")||null, notlar:get("c_not")||null };
-  let error;
-  if(editingContactId){ ({error}=await sb.from("kontaklar").update(data).eq("id",editingContactId)); }
-  else { ({error}=await sb.from("kontaklar").insert(data)); }
-  if(error){ alert("Kaydedilemedi: "+error.message); return; }
-  resetContactForm(); await loadContacts(); renderContactsList(); render();
-}
-async function deleteContact(id){
-  const c=contactById(id); if(!c) return;
-  if(!confirm(`"${c.ad}" kontağı silinsin mi? (İşlerdeki bağlantısı kaldırılır.)`)) return;
-  const { error } = await sb.from("kontaklar").delete().eq("id",id);
-  if(error){ alert("Silinemedi: "+error.message); return; }
-  await loadContacts(); renderContactsList(); render();
-}
-
 /* admin / yönetim */
 function colorOptions(selKey){ return PALETTE_KEYS.map(k=>`<option value="${k}" ${k===selKey?"selected":""}>${PALETTE[k].ad}</option>`).join(""); }
 async function refreshAfterAdmin(){ await loadProjectsAndLines(); buildChips(); render(); renderAdminAll(); }
@@ -1772,6 +1804,7 @@ async function loadProducers(){
   if(error){ console.error("ureticiler:", error.message); producers=[]; return; }
   producers = data || [];
   if(section==="ureticiler") renderProducers();
+  refreshMenu();
 }
 async function loadProducerFiles(){
   const { data, error } = await sb.from("uretici_dosyalari").select("*").order("created_at",{ascending:true});
@@ -1779,24 +1812,65 @@ async function loadProducerFiles(){
   producerFiles = data || [];
 }
 function producerFileCount(id){ return producerFiles.filter(f=>f.uretici_id===id).length; }
-function toggleSection(s){
-  if(s==="finans" && !hasFinance){ return; }
-  if(s==="magaza" && !hasMagaza){ return; }
+const SECTIONS=["menu","isler","magaza","finans","rehber","dijitalart","ureticiler"];
+function toggleSection(s, fromHistory){
+  if(s==="finans" && !hasFinance) s="menu";
+  if(s==="magaza" && !hasMagaza) s="menu";
+  if(!SECTIONS.includes(s)) s="menu";
   section=s;
-  document.getElementById("magazaToolbar").style.display = s==="magaza" ? "flex" : "none";
-  document.getElementById("magazaBtn").classList.toggle("btn-primary", s==="magaza");
-  document.getElementById("taskToolbar").style.display = s==="isler" ? "flex" : "none";
-  document.getElementById("prodToolbar").style.display = s==="ureticiler" ? "flex" : "none";
-  document.getElementById("finansToolbar").style.display = s==="finans" ? "flex" : "none";
-  document.getElementById("eserToolbar").style.display = s==="dijitalart" ? "flex" : "none";
-  document.getElementById("prodBtn").classList.toggle("btn-primary", s==="ureticiler");
-  document.getElementById("finansBtn").classList.toggle("btn-primary", s==="finans");
-  document.getElementById("eserBtn").classList.toggle("btn-primary", s==="dijitalart");
-  if(s==="ureticiler"){ renderProducers(); }
+  // telefonda "geri" hareketi menüye dönsün
+  if(!fromHistory && location.hash.slice(1)!==(s==="menu"?"":s)){
+    if(s==="menu") history.pushState(null,"",location.pathname+location.search);
+    else history.pushState(null,"","#"+s);
+  }
+  [["taskToolbar","isler"],["prodToolbar","ureticiler"],["finansToolbar","finans"],["eserToolbar","dijitalart"],["magazaToolbar","magaza"],["rehberToolbar","rehber"]]
+    .forEach(([id,k])=>document.getElementById(id).style.display = s===k ? "flex" : "none");
+  toggleCart(false);
+  window.scrollTo(0,0);
+  if(s==="menu"){ renderMenu(); }
+  else if(s==="ureticiler"){ renderProducers(); }
   else if(s==="finans"){ updateFinansLabel(); setFinansView(finansView); }
   else if(s==="dijitalart"){ renderEserler(); }
   else if(s==="magaza"){ updateMagazaLabel(); setMagazaView(magazaView); }
+  else if(s==="rehber"){ setRehberView(rehberView); }
   else { render(); }
+}
+window.addEventListener("popstate", ()=>{ if(!me) return; const h=location.hash.slice(1); toggleSection(SECTIONS.includes(h)?h:"menu", true); });
+
+/* ana menü */
+let menuTimer=null;
+function refreshMenu(){ if(section!=="menu") return; clearTimeout(menuTimer); menuTimer=setTimeout(renderMenu,150); }
+function renderMenu(){
+  const board=document.getElementById("board"); board.className="";
+  const today=new Date(); today.setHours(0,0,0,0);
+  const todayK=localKey(new Date().toISOString());
+  const mine=tasks.filter(t=>t.status!=="Tamamlandı" && myName && [t.manager,t.owner,t.helper].includes(myName));
+  const acil=mine.filter(t=>t.urgent).length;
+  const gecTask=mine.filter(t=>t.end && new Date(t.end+"T23:59:59")<new Date()).length;
+  const bugun=satislar.filter(s=>!s.iptal && localKey(s.tarih)===todayK);
+  const bekOd=odemeler.filter(o=>o.durum!=="Ödendi" && o.yon!=="Gelen");
+  const gecOd=bekOd.filter(isOdemeGecikti).length;
+  const takip=contacts.filter(c=>c.sonraki_temas && new Date(c.sonraki_temas+"T00:00:00")<=today).length;
+  const yeniBas=eserler.filter(e=>e.asama==="Başvuru Yaptı").length;
+  const saat=new Date().getHours();
+  const selam=saat<6?"İyi geceler":saat<12?"Günaydın":saat<18?"İyi günler":"İyi akşamlar";
+  const tile=(key,ico,bg,title,sub,badge,onclick)=>`<button class="tile" onclick="${onclick||`toggleSection('${key}')`}">
+      ${badge?`<span class="tb">${badge}</span>`:""}
+      <div class="ico" style="background:${bg};">${ico}</div><div class="tt">${title}</div><div class="ts">${sub}</div></button>`;
+  const tiles=[
+    tile("isler","📋","#EEEDFE","İşler", `${mine.length} açık görevin${acil?` · <b style="color:#c0392b">${acil} acil</b>`:""}`, gecTask?`${gecTask} gecikmiş`:""),
+    hasMagaza?tile("magaza","🛍️","#E1F5EE","Mağaza", `Bugün ${bugun.length} satış · ${fmtMoney(bugun.reduce((s,x)=>s+Number(x.toplam||0),0))}`, ""):"",
+    hasFinance?tile("finans","🏦","#E6F1FB","Finans", `Bekleyen ödeme: ${fmtMoney(bekOd.reduce((s,o)=>s+Number(o.tutar||0),0))}`, gecOd?`${gecOd} gecikmiş`:""):"",
+    tile("rehber","📇","#FAEEDA","Rehber", `${contacts.length} kişi / firma · influencer, partner…`, takip?`${takip} takip`:""),
+    tile("dijitalart","🎨","#FBEAF0","Dijital Art", `${eserler.length} eser${yeniBas?` · ${yeniBas} yeni başvuru`:""}`, ""),
+    tile("ureticiler","🏭","#F1EFE8","Üreticiler", `${producers.length} üretici`, ""),
+    tile("ekip","👥","#EAF3DE","Ekip", `${peopleRows.length} kişi`, "", "openPeople()"),
+  ].join("");
+  board.innerHTML=`<div class="home">
+    <div class="home-hi">${selam}${myName?", "+escapeHtml(String(myName).split(" ")[0]):""} 👋</div>
+    <div class="home-sub">Nereye gitmek istersin?</div>
+    <div class="tiles">${tiles}</div>
+  </div>`;
 }
 function prodCardHtml(p){
   const done=p.asama==="Red Edildi";
@@ -1927,6 +2001,7 @@ async function loadEserler(){
   if(error){ console.error("basvurular:", error.message); eserler=[]; return; }
   eserler = data || [];
   if(section==="dijitalart") renderEserler();
+  refreshMenu();
 }
 async function loadEserFiles(){
   const { data, error } = await sb.from("basvuru_dosyalari").select("*").order("created_at",{ascending:true});
@@ -2079,6 +2154,7 @@ async function loadOdemeler(){
   if(error){ console.error("odemeler:", error.message); odemeler=[]; return; }
   odemeler = data || [];
   if(section==="finans") renderFinans();
+  refreshMenu();
 }
 function isOdemeGecikti(o){ if(o.durum==="Ödendi" || o.yon==="Gelen" || !o.tarih) return false; return new Date(o.tarih+"T23:59:59") < new Date(); }
 function updateFinansLabel(){
@@ -2322,6 +2398,253 @@ async function deleteAvans(){
   closeAvans(); await loadAvanslar(); renderFinans();
 }
 
+/* rehber (kontaklar) */
+const REHBER_KATEGORI = ["Influencer","Partner","Sponsor","Marka / Tasarımcı","Sanatçı","Tedarikçi","Basın / Medya","Ajans","Müşteri","Diğer"];
+const REHBER_KAT_RENK = { "Influencer":["#FBEAF0","#993556"], "Partner":["#EEEDFE","#534AB7"], "Sponsor":["#E6F1FB","#185FA5"], "Marka / Tasarımcı":["#E1F5EE","#0F6E56"],
+  "Sanatçı":["#FAEEDA","#854F0B"], "Tedarikçi":["#F1EFE8","#5F5E5A"], "Basın / Medya":["#FCEBEB","#A32D2D"], "Ajans":["#EAF3DE","#3B6D11"], "Müşteri":["#E6F1FB","#185FA5"], "Diğer":["#F1EFE8","#5F5E5A"] };
+const REHBER_DURUM = ["Aktif","Görüşülüyor","Potansiyel","Pasif"];
+const KAYIT_TUR = ["Not","Arama","Mesaj","E-posta","Toplantı","Teklif","İş birliği"];
+const KAYIT_IKON = { "Not":"📝","Arama":"📞","Mesaj":"💬","E-posta":"✉️","Toplantı":"🤝","Teklif":"📄","İş birliği":"⭐" };
+let rehberView = "liste";       // "liste" | "takip"
+let rhSearch="", rhKat="", rhDurum="", rhSorumlu="", rhSort="ad", rhSadeceBen=false;
+let kayitlar = [];
+let editingKontakId = null;
+function rehberHazir(){ return !contacts.length || ("kategori" in contacts[0]); }
+async function loadKayitlar(){
+  try{ kayitlar = await fetchAll("kontak_kayitlari","tarih",false); }
+  catch(e){ console.error("kontak_kayitlari:", e.message); kayitlar=[]; }
+}
+function refreshRehber(){
+  if(document.getElementById("kontakOverlay").classList.contains("show") && editingKontakId) renderKayitlar();
+  if(section!=="rehber") return;
+  if(rehberView==="liste" && document.getElementById("rhTable")){ renderRehberTable(); return; }
+  renderRehber();
+}
+function setRehberView(v){
+  rehberView=v;
+  document.getElementById("rvListe").classList.toggle("active", v==="liste");
+  document.getElementById("rvTakip").classList.toggle("active", v==="takip");
+  renderRehber();
+}
+function renderRehber(){ updateTakipBadge(); return rehberView==="takip" ? renderRehberTakip() : renderRehberListe(); }
+function todayStr(){ return localKey(new Date().toISOString()); }
+function takipDurumu(c){ if(!c.sonraki_temas) return null; const t=todayStr(); return c.sonraki_temas<t?"gecikti":c.sonraki_temas===t?"bugun":"ileri"; }
+function updateTakipBadge(){
+  const n=contacts.filter(c=>{ const d=takipDurumu(c); return d==="gecikti"||d==="bugun"; }).length;
+  document.getElementById("rvTakipN").innerHTML = n?`<span style="background:#c0392b; color:#fff; border-radius:999px; padding:0 6px; font-size:11px; margin-left:3px;">${n}</span>`:"";
+}
+function katPill(k){ const [bg,fg]=REHBER_KAT_RENK[k]||REHBER_KAT_RENK["Diğer"]; return `<span class="pill" style="background:${bg}; color:${fg};">${escapeHtml(k||"Diğer")}</span>`; }
+function fmtTakipci(n){ if(n==null||n==="") return ""; return new Intl.NumberFormat("tr-TR",{notation:"compact", maximumFractionDigits:1}).format(Number(n)); }
+function socUrl(kind, v){
+  if(!v) return ""; v=String(v).trim(); if(/^https?:\/\//i.test(v)) return v;
+  const h=v.replace(/^@/,"");
+  if(kind==="ig") return "https://instagram.com/"+h;
+  if(kind==="tt") return "https://www.tiktok.com/@"+h;
+  if(kind==="yt") return "https://youtube.com/"+(h.startsWith("@")?h:"@"+h);
+  return "https://"+v;
+}
+function waNumber(tel){ let d=String(tel||"").replace(/\D/g,""); if(d.startsWith("0")) d="9"+d; else if(d.length===10 && d.startsWith("5")) d="90"+d; return d; }
+function kontakLinks(c, cls){
+  const a=(href,txt)=>`<a class="${cls}" href="${escapeHtml(href)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${txt}</a>`;
+  return [
+    c.telefon?a("tel:"+String(c.telefon).replace(/[^\d+]/g,""),"📞 Ara"):"",
+    c.telefon?a("https://wa.me/"+waNumber(c.telefon),"WhatsApp"):"",
+    c.email?a("mailto:"+c.email,"✉️ E-posta"):"",
+    c.instagram?a(socUrl("ig",c.instagram),"Instagram"):"",
+    c.tiktok?a(socUrl("tt",c.tiktok),"TikTok"):"",
+    c.youtube?a(socUrl("yt",c.youtube),"YouTube"):"",
+    c.website?a(socUrl("web",c.website),"Web"):"",
+  ].filter(Boolean).join("");
+}
+function rehberSetupBox(){
+  return rehberHazir() ? "" : `<div class="mg-warn">Rehber'in yeni alanları için Supabase SQL Editor'de <b>update-rehber.sql</b> dosyasını çalıştırın. Mevcut kontaklar korunur.</div>`;
+}
+function rehberFiltre(c){
+  const q=rhSearch.toLocaleLowerCase("tr");
+  if(q && !([c.ad,c.firma,c.unvan,c.instagram,c.tiktok,c.email,c.telefon,c.sehir,c.notlar,(c.etiketler||[]).join(" ")].filter(Boolean).join(" ").toLocaleLowerCase("tr").includes(q))) return false;
+  if(rhKat && (c.kategori||"Diğer")!==rhKat) return false;
+  if(rhDurum && (c.durum||"Aktif")!==rhDurum) return false;
+  if(rhSorumlu && c.sorumlu!==rhSorumlu) return false;
+  return true;
+}
+function rehberSirala(list){
+  const by={ ad:(a,b)=>(a.ad||"").localeCompare(b.ad||"","tr"),
+    son:(a,b)=>(b.son_temas||"").localeCompare(a.son_temas||""),
+    takip:(a,b)=>(a.sonraki_temas||"9999").localeCompare(b.sonraki_temas||"9999"),
+    takipci:(a,b)=>(Number(b.takipci)||0)-(Number(a.takipci)||0),
+    yeni:(a,b)=>(b.created_at||"").localeCompare(a.created_at||"") }[rhSort];
+  return list.slice().sort(by);
+}
+function renderRehberListe(){
+  const board=document.getElementById("board"); board.className="";
+  const say=k=>contacts.filter(c=>(c.kategori||"Diğer")===k).length;
+  const takipN=contacts.filter(c=>{ const d=takipDurumu(c); return d==="gecikti"||d==="bugun"; }).length;
+  const kats=REHBER_KATEGORI.filter(k=>say(k)>0);
+  board.innerHTML=`<div class="listwrap">
+    ${rehberSetupBox()}
+    <div class="stats">
+      <div class="stat"><span class="n">${contacts.length}</span><span class="l">Kişi / firma</span></div>
+      <div class="stat"><span class="n">${say("Influencer")}</span><span class="l">Influencer</span></div>
+      <div class="stat"><span class="n">${say("Partner")+say("Sponsor")}</span><span class="l">Partner & sponsor</span></div>
+      <div class="stat ${takipN?"danger":""}" style="cursor:pointer;" onclick="setRehberView('takip')"><span class="n">${takipN}</span><span class="l">Bugün / gecikmiş takip</span></div>
+    </div>
+    <div class="rh-chips">
+      <span class="chip ${!rhKat?"active":""}" onclick="rhKat=''; renderRehber()">Tümü ${contacts.length}</span>
+      ${kats.map(k=>`<span class="chip ${rhKat===k?"active":""}" onclick="rhKat=${escapeHtml(JSON.stringify(k))}; renderRehber()">${escapeHtml(k)} ${say(k)}</span>`).join("")}
+    </div>
+    <div class="mg-filters">
+      <input placeholder="Ad, firma, @hesap, etiket ara…" value="${escapeHtml(rhSearch)}" oninput="rhSearch=this.value; renderRehberTable()">
+      <select onchange="rhDurum=this.value; renderRehberTable()"><option value="">Tüm durumlar</option>${REHBER_DURUM.map(d=>`<option ${d===rhDurum?"selected":""}>${d}</option>`).join("")}</select>
+      <select onchange="rhSorumlu=this.value; renderRehberTable()"><option value="">Tüm sorumlular</option>${peopleNames().map(n=>`<option ${n===rhSorumlu?"selected":""}>${escapeHtml(n)}</option>`).join("")}</select>
+      <select onchange="rhSort=this.value; renderRehberTable()">${[["ad","A → Z"],["son","Son temas"],["takip","Takip tarihi"],["takipci","Takipçi"],["yeni","Yeni eklenen"]].map(([v,l])=>`<option value="${v}" ${v===rhSort?"selected":""}>Sırala: ${l}</option>`).join("")}</select>
+    </div>
+    <div class="mg-scroll" id="rhTable"></div>
+  </div>`;
+  renderRehberTable();
+}
+function renderRehberTable(){
+  const el=document.getElementById("rhTable"); if(!el) return;
+  updateTakipBadge();
+  const list=rehberSirala(contacts.filter(rehberFiltre));
+  const rows=list.length ? list.map(c=>{
+    const td=takipDurumu(c);
+    const pasif=(c.durum||"Aktif")==="Pasif";
+    return `<tr onclick="openKontakEdit('${c.id}')" style="${pasif?"opacity:.55;":""}">
+      <td><b>${escapeHtml(c.ad)}</b>${c.durum && c.durum!=="Aktif"?` <span class="st">· ${escapeHtml(c.durum)}</span>`:""}
+        <div class="st">${[c.firma,c.unvan,c.sehir].filter(Boolean).map(escapeHtml).join(" · ")}</div>
+        ${(c.etiketler||[]).length?`<div>${c.etiketler.map(e=>`<span class="rh-tag">${escapeHtml(e)}</span>`).join("")}</div>`:""}</td>
+      <td>${katPill(c.kategori)}</td>
+      <td class="hide-m">${kontakLinks(c,"rh-soc")||`<span class="st">—</span>`}</td>
+      <td class="num hide-m">${fmtTakipci(c.takipci)||`<span class="st">—</span>`}</td>
+      <td class="st hide-m">${escapeHtml(c.sorumlu||"")}</td>
+      <td class="st hide-m" style="white-space:nowrap;">${c.son_temas?fmtFull(c.son_temas):"—"}</td>
+      <td style="white-space:nowrap;" class="${td==="gecikti"?"td-overdue":""}">${c.sonraki_temas?(td==="bugun"?"<b>Bugün</b>":fmtFull(c.sonraki_temas)):`<span class="st">—</span>`}</td>
+    </tr>`; }).join("") : `<tr><td colspan="7"><div class="list-empty">${contacts.length?"Aramaya uyan kayıt yok.":"Henüz kimse yok. “+ Kişi / firma” ile ekleyin."}</div></td></tr>`;
+  el.innerHTML=`<table class="list"><thead><tr><th>Ad</th><th>Kategori</th><th class="hide-m">İletişim</th><th class="num hide-m">Takipçi</th><th class="hide-m">Sorumlu</th><th class="hide-m">Son temas</th><th>Takip</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function renderRehberTakip(){
+  const board=document.getElementById("board"); board.className="";
+  const t=todayStr(); const hafta=localKey(new Date(Date.now()+7*864e5).toISOString());
+  const list=contacts.filter(c=>c.sonraki_temas && (!rhSadeceBen || c.sorumlu===myName)).sort((a,b)=>a.sonraki_temas.localeCompare(b.sonraki_temas));
+  const groups=[["Gecikmiş",c=>c.sonraki_temas<t],["Bugün",c=>c.sonraki_temas===t],["Bu hafta",c=>c.sonraki_temas>t && c.sonraki_temas<=hafta],["Daha sonra",c=>c.sonraki_temas>hafta]];
+  const sonKayit=id=>kayitlar.find(k=>k.kontak_id===id);
+  const row=c=>{ const k=sonKayit(c.id); return `<div class="cal-row" onclick="openKontakEdit('${c.id}')">
+      <div style="flex:1; min-width:0;"><div class="cal-title">${escapeHtml(c.ad)} ${katPill(c.kategori)}</div>
+      <div class="cal-sub">${[c.firma, c.sorumlu?"sorumlu: "+c.sorumlu:"", k?`son: ${k.tur} · ${(k.metin||"").slice(0,60)}`:""].filter(Boolean).map(escapeHtml).join(" · ")}</div></div>
+      <span class="cal-date ${c.sonraki_temas<t?"td-overdue":""}">${fmtFull(c.sonraki_temas)}</span></div>`; };
+  const html=groups.map(([g,f])=>{ const items=list.filter(f); return items.length?`<div class="cal-group">${g} <span>${items.length}</span></div>`+items.map(row).join(""):""; }).join("");
+  board.innerHTML=`<div class="listwrap">
+    ${rehberSetupBox()}
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+      <div style="font-size:13px; color:var(--text-3);">“Sonraki takip tarihi” girilen kişiler. Görüşünce kayıt ekleyip yeni tarih verin.</div>
+      <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" ${rhSadeceBen?"checked":""} onchange="rhSadeceBen=this.checked; renderRehber()"> Sadece benim sorumlu olduklarım</label>
+    </div>
+    ${html||`<div class="list-empty">Takip bekleyen kimse yok.</div>`}
+  </div>`;
+}
+function fillKontakSelects(){
+  document.getElementById("kn_kategori").innerHTML=REHBER_KATEGORI.map(k=>`<option>${k}</option>`).join("");
+  document.getElementById("kn_durum").innerHTML=REHBER_DURUM.map(k=>`<option>${k}</option>`).join("");
+  document.getElementById("kn_sorumlu").innerHTML=`<option value="">— yok —</option>`+peopleNames().map(n=>`<option>${escapeHtml(n)}</option>`).join("");
+  document.getElementById("kl_tur").innerHTML=KAYIT_TUR.map(k=>`<option>${k}</option>`).join("");
+  const tags=[...new Set(contacts.flatMap(c=>c.etiketler||[]))].sort((a,b)=>a.localeCompare(b,"tr"));
+  document.getElementById("knEtiketList").innerHTML=tags.map(x=>`<option value="${escapeHtml(x)}">`).join("");
+}
+function openKontak(){
+  editingKontakId=null; fillKontakSelects();
+  document.getElementById("kontakModalTitle").textContent="Yeni kişi / firma";
+  document.getElementById("kontakDeleteBtn").style.display="none";
+  document.getElementById("kn_gecmisWrap").style.display="none";
+  document.getElementById("kn_actions").innerHTML="";
+  ["kn_ad","kn_firma","kn_tel","kn_email","kn_ig","kn_tt","kn_yt","kn_web","kn_takipci","kn_sehir","kn_unvan","kn_ucret","kn_sonraki","kn_etiket","kn_not"].forEach(id=>setV(id,""));
+  document.getElementById("kn_kategori").value=rhKat||"Influencer";
+  document.getElementById("kn_durum").value="Aktif";
+  document.getElementById("kn_sorumlu").value=myName&&peopleNames().includes(myName)?myName:"";
+  document.getElementById("kontakOverlay").classList.add("show");
+  setTimeout(()=>document.getElementById("kn_ad").focus(),50);
+}
+function openKontakEdit(id){
+  const c=contactById(id); if(!c) return;
+  editingKontakId=id; fillKontakSelects();
+  document.getElementById("kontakModalTitle").textContent=c.ad;
+  document.getElementById("kontakDeleteBtn").style.display="inline";
+  document.getElementById("kn_actions").innerHTML=kontakLinks(c,"");
+  setV("kn_ad",c.ad); setV("kn_firma",c.firma); setV("kn_tel",c.telefon); setV("kn_email",c.email);
+  setV("kn_ig",c.instagram); setV("kn_tt",c.tiktok); setV("kn_yt",c.youtube); setV("kn_web",c.website);
+  setV("kn_takipci",c.takipci!=null?String(c.takipci):""); setV("kn_sehir",c.sehir); setV("kn_unvan",c.unvan); setV("kn_ucret",c.ucret_notu);
+  setV("kn_sonraki",c.sonraki_temas); setV("kn_etiket",(c.etiketler||[]).join(", ")); setV("kn_not",c.notlar);
+  document.getElementById("kn_kategori").value=c.kategori||"Diğer";
+  document.getElementById("kn_durum").value=c.durum||"Aktif";
+  if(c.sorumlu && !peopleNames().includes(c.sorumlu)) document.getElementById("kn_sorumlu").insertAdjacentHTML("beforeend",`<option>${escapeHtml(c.sorumlu)}</option>`);
+  document.getElementById("kn_sorumlu").value=c.sorumlu||"";
+  document.getElementById("kn_gecmisWrap").style.display="block";
+  document.getElementById("kl_tur").value="Not"; setV("kl_tarih",todayStr()); setV("kl_tutar",""); setV("kl_metin","");
+  renderKayitlar();
+  document.getElementById("kontakOverlay").classList.add("show");
+}
+function closeKontak(){ document.getElementById("kontakOverlay").classList.remove("show"); editingKontakId=null; }
+function renderKayitlar(){
+  const id=editingKontakId; if(!id) return;
+  const list=kayitlar.filter(k=>k.kontak_id===id).sort((a,b)=>(b.tarih||"").localeCompare(a.tarih||"")||(b.created_at||"").localeCompare(a.created_at||""));
+  const toplam=list.filter(k=>k.tur==="İş birliği" && k.tutar).reduce((s,k)=>s+Number(k.tutar),0);
+  document.getElementById("kn_kayitlar").innerHTML=(toplam?`<div style="font-size:12px; color:var(--text-2); margin-bottom:4px;">Toplam iş birliği: <b>${fmtMoney(toplam)}</b></div>`:"")+
+    (list.length ? list.map(k=>`<div class="rh-log">
+      <span class="d">${fmtFull(k.tarih)}</span>
+      <span style="flex:1; min-width:0;">${KAYIT_IKON[k.tur]||"•"} <b>${escapeHtml(k.tur)}</b>${k.tutar?` · ${fmtMoney(k.tutar)}`:""}${k.metin?` — ${escapeHtml(k.metin)}`:""}
+        ${k.yazan?`<span style="color:var(--text-3); font-size:11px;"> · ${escapeHtml(k.yazan)}</span>`:""}</span>
+      <button class="icon-btn" style="font-size:16px;" title="Sil" onclick="deleteKayit('${k.id}')">&times;</button></div>`).join("")
+    : `<div style="color:var(--text-3); font-size:13px; padding:4px 0;">Henüz kayıt yok. İlk görüşmeyi yukarıdan ekleyin.</div>`);
+  const isler=tasks.filter(t=>t.kontakId===id);
+  const eser=eserler.filter(e=>e.sanatci_id===id);
+  document.getElementById("kn_bagli").innerHTML=(isler.length||eser.length)?`<div style="font-size:13px; font-weight:600; color:var(--text-2); margin:16px 0 6px;">Bağlı işler</div>`+
+    isler.map(t=>`<div class="cal-row" onclick="closeKontak(); toggleSection('isler'); openEdit('${t.id}')"><div style="flex:1;" class="cal-title ${t.status==="Tamamlandı"?"done":""}">📋 ${escapeHtml(t.title)}</div><span class="cal-date">${escapeHtml(t.status)}</span></div>`).join("")+
+    eser.map(e=>`<div class="cal-row" onclick="closeKontak(); toggleSection('dijitalart'); openEserEdit('${e.id}')"><div style="flex:1;" class="cal-title">🎨 ${escapeHtml(e.eser_adi||"")}</div><span class="cal-date">${escapeHtml(e.asama||"")}</span></div>`).join("") : "";
+}
+async function saveKontak(){
+  const ad=document.getElementById("kn_ad").value.trim(); if(!ad){ document.getElementById("kn_ad").focus(); return; }
+  const takipci=parseInt(String(document.getElementById("kn_takipci").value).replace(/\D/g,""),10);
+  const data={ ad, firma:gv("kn_firma"), telefon:gv("kn_tel"), email:gv("kn_email"), notlar:gv("kn_not"),
+    kategori:document.getElementById("kn_kategori").value, durum:document.getElementById("kn_durum").value,
+    instagram:gv("kn_ig"), tiktok:gv("kn_tt"), youtube:gv("kn_yt"), website:gv("kn_web"),
+    takipci:isNaN(takipci)?null:takipci, sehir:gv("kn_sehir"), unvan:gv("kn_unvan"), ucret_notu:gv("kn_ucret"),
+    sorumlu:document.getElementById("kn_sorumlu").value||null, sonraki_temas:document.getElementById("kn_sonraki").value||null,
+    etiketler:[...new Set(document.getElementById("kn_etiket").value.split(",").map(s=>s.trim()).filter(Boolean))] };
+  let error;
+  if(editingKontakId){ ({error}=await sb.from("kontaklar").update(data).eq("id",editingKontakId)); }
+  else { ({error}=await sb.from("kontaklar").insert(data)); }
+  if(error){ alert("Kaydedilemedi: "+error.message+(rehberHazir()?"":"\n\nÖnce update-rehber.sql çalıştırılmalı.")); return; }
+  closeKontak(); await loadContacts(); refreshRehber();
+}
+async function deleteKontak(){
+  const c=contactById(editingKontakId); if(!c) return;
+  if(!confirm(`“${c.ad}” rehberden silinsin mi? Görüşme geçmişi de silinir; işlerdeki bağlantısı kaldırılır.`)) return;
+  const { error } = await sb.from("kontaklar").delete().eq("id",c.id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  closeKontak(); await Promise.all([loadContacts(), loadKayitlar()]); refreshRehber();
+}
+async function addKayit(){
+  if(!editingKontakId) return;
+  const metin=document.getElementById("kl_metin").value.trim();
+  const tutar=parseFloat(String(document.getElementById("kl_tutar").value).replace(/\./g,"").replace(",","."));
+  if(!metin && isNaN(tutar)){ document.getElementById("kl_metin").focus(); return; }
+  const { error } = await sb.from("kontak_kayitlari").insert({ kontak_id:editingKontakId, tur:document.getElementById("kl_tur").value,
+    tarih:document.getElementById("kl_tarih").value||todayStr(), metin:metin||null, tutar:isNaN(tutar)?null:tutar, yazan:myName });
+  if(error){ alert("Eklenemedi: "+error.message+(rehberHazir()?"":"\n\nÖnce update-rehber.sql çalıştırılmalı.")); return; }
+  setV("kl_metin",""); setV("kl_tutar","");
+  await Promise.all([loadKayitlar(), loadContacts()]); renderKayitlar(); refreshRehber();
+}
+async function deleteKayit(id){
+  if(!confirm("Bu kayıt silinsin mi?")) return;
+  const { error } = await sb.from("kontak_kayitlari").delete().eq("id",id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  await loadKayitlar(); renderKayitlar();
+}
+function rehberCsv(){
+  const list=rehberSirala(contacts.filter(rehberFiltre));
+  csvDownload("rehber.csv", [["Ad","Firma","Ünvan","Kategori","Durum","Telefon","E-posta","Instagram","TikTok","YouTube","Website","Takipçi","Şehir","Ücret notu","Etiketler","Sorumlu","Son temas","Sonraki takip","Notlar"],
+    ...list.map(c=>[c.ad,c.firma,c.unvan,c.kategori,c.durum,c.telefon,c.email,c.instagram,c.tiktok,c.youtube,c.website,c.takipci,c.sehir,c.ucret_notu,(c.etiketler||[]).join(", "),c.sorumlu,c.son_temas?fmtFull(c.son_temas):"",c.sonraki_temas?fmtFull(c.sonraki_temas):"",c.notlar])]);
+}
+
 /* mağaza */
 let magazaErr = "";
 async function fetchAll(table, orderCol, asc){
@@ -2345,7 +2668,7 @@ async function loadSatislar(){
   if(!hasMagaza) return;
   try{ satislar = await fetchAll("magaza_satislar","tarih",false); }
   catch(e){ console.error("magaza_satislar:", e.message); satislar=[]; }
-  refreshMagaza();
+  refreshMagaza(); refreshMenu();
   if(viewingSatisId && document.getElementById("satisOverlay").classList.contains("show")) renderSatisDetail();
 }
 function refreshMagaza(){
@@ -2966,7 +3289,7 @@ async function notifyAssign(data, oldT, taskId){
 
 document.getElementById("overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeModal(); });
 document.getElementById("peopleOverlay").addEventListener("click", e=>{ if(e.target.id==="peopleOverlay") closePeople(); });
-document.getElementById("contactsOverlay").addEventListener("click", e=>{ if(e.target.id==="contactsOverlay") closeContacts(); });
+document.getElementById("kontakOverlay").addEventListener("click", e=>{ if(e.target.id==="kontakOverlay") closeKontak(); });
 document.getElementById("adminOverlay").addEventListener("click", e=>{ if(e.target.id==="adminOverlay") closeAdmin(); });
 document.getElementById("prodOverlay").addEventListener("click", e=>{ if(e.target.id==="prodOverlay") closeProducer(); });
 document.getElementById("inboxOverlay").addEventListener("click", e=>{ if(e.target.id==="inboxOverlay") closeBildirimler(); });
@@ -2976,7 +3299,7 @@ document.getElementById("avansOverlay").addEventListener("click", e=>{ if(e.targ
 document.getElementById("urunOverlay").addEventListener("click", e=>{ if(e.target.id==="urunOverlay") closeUrun(); });
 document.getElementById("stokOverlay").addEventListener("click", e=>{ if(e.target.id==="stokOverlay") closeStok(); });
 document.getElementById("satisOverlay").addEventListener("click", e=>{ if(e.target.id==="satisOverlay") closeSatis(); });
-document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeContacts(); closeAdmin(); closeProducer(); closeBildirimler(); closeOdeme(); closeEser(); closeAvans(); closeUrun(); closeStok(); closeSatis(); toggleCart(false); } });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ closeModal(); closePeople(); closeKontak(); closeAdmin(); closeProducer(); closeBildirimler(); closeOdeme(); closeEser(); closeAvans(); closeUrun(); closeStok(); closeSatis(); toggleCart(false); } });
 
 boot();
 </script>
