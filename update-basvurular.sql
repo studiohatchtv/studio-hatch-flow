@@ -4,22 +4,36 @@
 -- https://supabase.com/dashboard/project/uolmzykwvizhmycgymfi/sql/new
 -- ============================================================
 
--- 1) Başvurular tablosu
+-- 1) Başvurular tablosu (veya mevcut tabloya alanlar ekle)
 create table if not exists public.basvurular (
   id         uuid primary key default gen_random_uuid(),
-  basvuru_turu text not null,      -- Tasarımcı & Marka | Atölye | Etkinlik & İş Birliği
+  basvuru_turu text not null,
   ad_soyad   text not null,
   email      text not null,
   telefon    text,
   instagram  text,
   website    text,
-  alanlar    jsonb not null default '{}',  -- tür-spesifik alanlar
-  durum      text not null default 'yeni',  -- yeni | kontakta_çıkıldı | seçildi | reddedildi
+  alanlar    jsonb not null default '{}',
+  durum      text not null default 'yeni',
   not_admin  text,
   created_by uuid,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Mevcut tabloya yeni alanlar ekle (eğer yoksa)
+alter table public.basvurular add column if not exists basvuru_turu text not null default 'Tasarımcı & Marka';
+alter table public.basvurular add column if not exists ad_soyad text not null default '';
+alter table public.basvurular add column if not exists email text not null default '';
+alter table public.basvurular add column if not exists telefon text;
+alter table public.basvurular add column if not exists instagram text;
+alter table public.basvurular add column if not exists website text;
+alter table public.basvurular add column if not exists alanlar jsonb not null default '{}';
+alter table public.basvurular add column if not exists durum text not null default 'yeni';
+alter table public.basvurular add column if not exists not_admin text;
+alter table public.basvurular add column if not exists created_by uuid;
+alter table public.basvurular add column if not exists created_at timestamptz not null default now();
+alter table public.basvurular add column if not exists updated_at timestamptz not null default now();
 
 create index if not exists basvurular_durum_idx on public.basvurular(durum);
 create index if not exists basvurular_tarih_idx on public.basvurular(created_at desc);
