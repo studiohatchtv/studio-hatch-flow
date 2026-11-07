@@ -465,10 +465,11 @@
 
 <div class="toolbar" id="basvuruToolbar" style="display:none;">
   <button class="btn" onclick="toggleSection('menu')">← Menü</button>
-  <span style="font-weight:600; font-size:15px;">📋 Başvurular</span>
+  <span style="font-weight:600; font-size:15px;">📨 Başvurular</span>
   <div class="spacer"></div>
-  <button class="btn" onclick="basvuruCsv()">⬇ CSV</button>
-  <button class="btn" onclick="window.open('https://studiohatchtv.github.io/studio-hatch-flow/basvuru','_blank')">🔗 Başvuru linki</button>
+  <button class="btn" onclick="katilimCsv()">⬇ CSV</button>
+  <button class="btn" onclick="katilimLinkKopyala(this)">🔗 Linki kopyala</button>
+  <a class="btn" href="katil.html" target="_blank" rel="noopener" style="text-decoration:none;">Formu aç ↗</a>
 </div>
 
 <div id="board"></div>
@@ -861,9 +862,12 @@
 <!-- Başvurular modal -->
 <div class="overlay" id="basvuruOverlay">
   <div class="modal">
-    <div class="modal-head"><h2 id="basvuruModalTitle">Başvuru</h2><button class="icon-btn" onclick="closeBasvuruModal()">&times;</button></div>
+    <div class="modal-head"><h2 id="basvuruModalTitle">Başvuru</h2><button class="icon-btn" onclick="closeKatilim()">&times;</button></div>
     <div class="modal-body" id="basvuruDetail"></div>
-    <div class="modal-foot"><button class="btn" onclick="closeBasvuruModal()">Kapat</button></div>
+    <div class="modal-foot">
+      <button class="link-danger" onclick="deleteKatilim()">Sil</button>
+      <div style="display:flex; gap:8px;"><button class="btn" onclick="closeKatilim()">Vazgeç</button><button class="btn btn-primary" onclick="saveKatilim()">Kaydet</button></div>
+    </div>
   </div>
 </div>
 
@@ -1017,7 +1021,7 @@ async function boot() {
   hasMagaza = isAdmin || hasFinance || !!(peopleRows.find(p=>p.user_id===me.id)?.magaza);
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadKayitlar(), loadBasvurular(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadKayitlar(), loadKatilim(), loadTasks()]);
   toggleSection(SECTIONS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "menu", true);
   subscribe();
   initPush();
@@ -1178,7 +1182,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"kisiler" }, loadPeople)
     .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, async()=>{ await loadContacts(); refreshRehber(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"kontak_kayitlari" }, async()=>{ await loadKayitlar(); refreshRehber(); })
-    .on("postgres_changes", { event:"*", schema:"public", table:"basvurular" }, async()=>{ await loadBasvurular(); refreshBasvurular(); refreshMenu(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"katilim_basvurulari" }, async()=>{ await loadKatilim(); refreshKatilim(); refreshMenu(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"ureticiler" }, loadProducers)
@@ -1188,6 +1192,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"avanslar" }, loadAvanslar)
     .on("postgres_changes", { event:"*", schema:"public", table:"magaza_urunler" }, loadUrunler)
     .on("postgres_changes", { event:"*", schema:"public", table:"magaza_satislar" }, loadSatislar)
+    .on("postgres_changes", { event:"*", schema:"public", table:"basvurular" }, loadEserler)
     .on("postgres_changes", { event:"*", schema:"public", table:"basvuru_dosyalari" }, async()=>{ await loadEserFiles(); if(editingEserId) renderEserFiles(editingEserId); if(section==="dijitalart") renderEserler(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
@@ -1836,6 +1841,7 @@ function toggleSection(s, fromHistory){
   if(s==="ureticiler"){ magazaView="ureticiler"; s="magaza"; }
   if(s==="finans" && !hasFinance) s="menu";
   if(s==="magaza" && !hasMagaza) s="menu";
+  if(s==="basvurular" && !isAdmin) s="menu";
   if(!SECTIONS.includes(s)) s="menu";
   section=s;
   // telefonda "geri" hareketi menüye dönsün
@@ -1852,6 +1858,7 @@ function toggleSection(s, fromHistory){
   else if(s==="dijitalart"){ renderEserler(); }
   else if(s==="magaza"){ updateMagazaLabel(); setMagazaView(magazaView); }
   else if(s==="rehber"){ setRehberView(rehberView); }
+  else if(s==="basvurular"){ renderKatilim(); }
   else { render(); }
 }
 window.addEventListener("popstate", ()=>{ if(!me) return; const h=location.hash.slice(1); toggleSection(SECTIONS.includes(h)?h:"menu", true); });
@@ -1876,13 +1883,13 @@ function renderMenu(){
   const tile=(key,ico,bg,title,sub,badge,onclick)=>`<button class="tile" onclick="${onclick||`toggleSection('${key}')`}">
       ${badge?`<span class="tb">${badge}</span>`:""}
       <div class="ico" style="background:${bg};">${ico}</div><div class="tt">${title}</div><div class="ts">${sub}</div></button>`;
-  const yeniBasvuru=basvurular.filter(b=>b.durum==="yeni").length;
+  const yeniKatilim=katilimlar.filter(b=>b.durum==="Yeni").length;
   const tiles=[
     tile("isler","📋","#EEEDFE","İşler", `${mine.length} açık görevin${acil?` · <b style="color:#c0392b">${acil} acil</b>`:""}`, gecTask?`${gecTask} gecikmiş`:""),
     hasMagaza?tile("magaza","🛍️","#E1F5EE","Mağaza", `Bugün ${bugun.length} satış · ${fmtMoney(bugun.reduce((s,x)=>s+Number(x.toplam||0),0))}<br>${producers.length} üretici · ${urunler.length} ürün`, ""):"",
     hasFinance?tile("finans","🏦","#E6F1FB","Finans", `Bekleyen ödeme: ${fmtMoney(bekOd.reduce((s,o)=>s+Number(o.tutar||0),0))}`, gecOd?`${gecOd} gecikmiş`:""):"",
     tile("rehber","📇","#FAEEDA","Rehber", `${contacts.length} kişi / firma · influencer, partner…`, takip?`${takip} takip`:""),
-    me && me.is_admin?tile("basvurular","📋","#F0E6FB","Başvurular", `${basvurular.length} başvuru`, yeniBasvuru?`${yeniBasvuru} yeni`:""):"",
+    isAdmin?tile("basvurular","📨","#F0E6FB","Başvurular", `${katilimlar.length} başvuru · tasarımcı, atölye, etkinlik`, yeniKatilim?`${yeniKatilim} yeni`:""):"",
     tile("dijitalart","🎨","#FBEAF0","Dijital Art", `${eserler.length} eser${yeniBas?` · ${yeniBas} yeni başvuru`:""}`, ""),
     tile("ekip","👥","#EAF3DE","Ekip", `${peopleRows.length} kişi`, "", "openPeople()"),
   ].join("");
@@ -2592,138 +2599,101 @@ function fillKontakSelects(){
   document.getElementById("knEtiketList").innerHTML=tags.map(x=>`<option value="${escapeHtml(x)}">`).join("");
 }
 
-/* başvurular */
-const BASVURU_TURU = ["Tasarımcı & Marka", "Atölye", "Etkinlik & İş Birliği"];
-const BASVURU_DURUM = ["yeni", "kontakta_çıkıldı", "seçildi", "reddedildi"];
-let basvurular = [];
-let basvuruView = "liste";
-let basvuruSearch = "", basvuruTuru = "";
-let editingBasvuruId = null;
-
-async function loadBasvurular(){
-  try{ basvurular = await fetchAll("basvurular","created_at",false); }
-  catch(e){ console.error("basvurular:", e.message); basvurular=[]; }
+/* başvurular ("Hatch'e Katıl" formu; Dijital Art'ın basvurular tablosundan ayrı) */
+const KATILIM_TUR = ["Tasarımcı & Marka","Atölye","Etkinlik & İş Birliği"];
+const KATILIM_DURUM = ["Yeni","İletişime geçildi","Seçildi","Reddedildi"];
+const KATILIM_RENK = { "Yeni":["#fceeee","#c0392b"], "İletişime geçildi":["#E6F1FB","#185FA5"], "Seçildi":["#E1F5EE","#0F6E56"], "Reddedildi":["#f1efe8","#6b6a62"] };
+let katilimlar = [], katilimHata = "";
+let katilimSearch = "", katilimTur = "", katilimDurum = "";
+let editingKatilimId = null;
+async function loadKatilim(){
+  if(!isAdmin) return;
+  try{ katilimlar = await fetchAll("katilim_basvurulari","created_at",false); katilimHata=""; }
+  catch(e){ console.error("katilim_basvurulari:", e.message); katilimlar=[]; katilimHata=e.message; }
 }
-
-function refreshBasvurular(){
-  if(section!=="basvurular") return;
-  renderBasvurular();
+function refreshKatilim(){ if(section==="basvurular") renderKatilim(); }
+function katilimPill(d){ const [bg,fg]=KATILIM_RENK[d]||KATILIM_RENK["Yeni"]; return `<span class="pill" style="background:${bg}; color:${fg};">${escapeHtml(d)}</span>`; }
+function katilimLink(){ return new URL("katil",location.href.split("#")[0].replace(/index\.html$/,"")).href; }
+async function katilimLinkKopyala(btn){
+  const eski=btn.textContent;
+  try{ await navigator.clipboard.writeText(katilimLink()); btn.textContent="✓ Kopyalandı"; }
+  catch(e){ prompt("Başvuru linki:", katilimLink()); return; }
+  setTimeout(()=>{ btn.textContent=eski; },1500);
 }
-
-function setBasvuruView(v){
-  basvuruView = v;
-  renderBasvurular();
-}
-
-function basvuruFiltre(b){
-  const q = basvuruSearch.toLocaleLowerCase("tr");
-  if(q && !([b.ad_soyad, b.email, b.telefon].filter(Boolean).join(" ").toLocaleLowerCase("tr").includes(q))) return false;
-  if(basvuruTuru && b.basvuru_turu !== basvuruTuru) return false;
-  return true;
-}
-
-function renderBasvurular(){
-  const board = document.getElementById("board"); board.className = "";
-  const list = basvurular.filter(basvuruFiltre).sort((a,b)=>new Date(b.created_at) - new Date(a.created_at));
-  const say = t => basvurular.filter(b=>b.basvuru_turu===t).length;
-  const yeni = b => b.durum === "yeni" ? 1 : 0;
-  const yeniSay = list.reduce((s,b)=>s+yeni(b),0);
-
-  const rows = list.length ? list.map(b => {
-    const durumRenk = {"yeni":"#fceeee", "kontakta_çıkıldı":"#E6F1FB", "seçildi":"#E1F5EE", "reddedildi":"#FAEEDA"};
-    const durumText = {"yeni":"Yeni", "kontakta_çıkıldı":"Kontakta çıkıldı", "seçildi":"Seçildi", "reddedildi":"Reddedildi"};
-    return `<tr onclick="openBasvuruDetail('${b.id}')">
-      <td><b>${escapeHtml(b.basvuru_turu)}</b><div class="st">${escapeHtml(b.ad_soyad)}</div></td>
-      <td>${escapeHtml(b.email)}</td>
-      <td class="st hide-m">${escapeHtml(b.telefon||"-")}</td>
-      <td><span class="pill" style="background:${durumRenk[b.durum]}; color:var(--text);">${durumText[b.durum]}</span></td>
-      <td class="st hide-m">${fmtFull(b.created_at)}</td>
-    </tr>`;
-  }).join("") : `<tr><td colspan="5"><div class="list-empty">${basvurular.length?"Aramaya uyan kayıt yok.":"Henüz başvuru yok."}</div></td></tr>`;
-
+function renderKatilim(){
+  const board=document.getElementById("board"); board.className="";
+  const say=t=>katilimlar.filter(b=>b.tur===t).length;
+  const yeni=katilimlar.filter(b=>b.durum==="Yeni").length;
   board.innerHTML=`<div class="listwrap">
-    <div class="stats">
-      <div class="stat ${yeniSay?"danger":""}"><span class="n">${basvurular.length}</span><span class="l">Toplam başvuru</span></div>
-      <div class="stat"><span class="n">${say("Tasarımcı & Marka")}</span><span class="l">Tasarımcı</span></div>
-      <div class="stat"><span class="n">${say("Atölye")}</span><span class="l">Atölye</span></div>
-      <div class="stat"><span class="n">${say("Etkinlik & İş Birliği")}</span><span class="l">Etkinlik</span></div>
-      <div class="stat ${yeniSay?"danger":""}"><span class="n">${yeniSay}</span><span class="l">Yeni başvuru</span></div>
+    ${katilimHata?`<div class="mg-warn">Başvurular yüklenemedi. Supabase SQL Editor'de <b>update-katilim.sql</b> dosyasını çalıştırın.</div>`:""}
+    <div class="stats five">
+      <div class="stat"><span class="n">${katilimlar.length}</span><span class="l">Toplam</span></div>
+      <div class="stat ${yeni?"danger":""}"><span class="n">${yeni}</span><span class="l">Yeni</span></div>
+      <div class="stat"><span class="n">${say(KATILIM_TUR[0])}</span><span class="l">Tasarımcı</span></div>
+      <div class="stat"><span class="n">${say(KATILIM_TUR[1])}</span><span class="l">Atölye</span></div>
+      <div class="stat"><span class="n">${say(KATILIM_TUR[2])}</span><span class="l">Etkinlik</span></div>
     </div>
     <div class="mg-filters">
-      <input placeholder="Ad, e-posta ara…" value="${escapeHtml(basvuruSearch)}" oninput="basvuruSearch=this.value; renderBasvurular()">
-      <select onchange="basvuruTuru=this.value; renderBasvurular()">
-        <option value="">Tüm türler</option>
-        ${BASVURU_TURU.map(t=>`<option ${t===basvuruTuru?"selected":""}>${t}</option>`).join("")}
-      </select>
+      <input placeholder="Ad, e-posta, telefon ara…" value="${escapeHtml(katilimSearch)}" oninput="katilimSearch=this.value; renderKatilimTable()">
+      <select onchange="katilimTur=this.value; renderKatilimTable()"><option value="">Tüm türler</option>${KATILIM_TUR.map(t=>`<option ${t===katilimTur?"selected":""}>${escapeHtml(t)}</option>`).join("")}</select>
+      <select onchange="katilimDurum=this.value; renderKatilimTable()"><option value="">Tüm durumlar</option>${KATILIM_DURUM.map(t=>`<option ${t===katilimDurum?"selected":""}>${t}</option>`).join("")}</select>
     </div>
-    <table class="list">
-      <thead><tr><th>Başvuru türü / Ad</th><th>E-posta</th><th class="hide-m">Telefon</th><th>Durum</th><th class="hide-m">Tarih</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <div class="mg-scroll" id="katilimTable"></div>
   </div>`;
+  renderKatilimTable();
 }
-
-async function openBasvuruDetail(id){
-  editingBasvuruId = id;
-  const b = basvurular.find(x=>x.id===id);
-  if(!b) return;
-  const durumText = {"yeni":"Yeni", "kontakta_çıkıldı":"Kontakta çıkıldı", "seçildi":"Seçildi", "reddedildi":"Reddedildi"};
-  const alanlarHtml = Object.entries(b.alanlar||{}).map(([k,v])=>`
-    <div><b>${escapeHtml(k)}:</b> ${typeof v==="object"?JSON.stringify(v):escapeHtml(String(v||""))}</div>
-  `).join("");
-
-  document.getElementById("basvuruModalTitle").textContent = b.basvuru_turu;
-  document.getElementById("basvuruDetail").innerHTML = `
-    <div class="field"><label><b>Ad / Marka</b></label><div>${escapeHtml(b.ad_soyad)}</div></div>
-    <div class="field"><label><b>E-posta</b></label><div>${escapeHtml(b.email)}</div></div>
-    <div class="field"><label><b>Telefon</b></label><div>${escapeHtml(b.telefon||"-")}</div></div>
-    ${[b.instagram, b.website].filter(Boolean).length?`<div class="field"><label><b>İletişim</b></label><div>
-      ${b.instagram?`<a href="https://instagram.com/${escapeHtml(b.instagram)}" target="_blank" rel="noopener">Instagram: @${escapeHtml(b.instagram)}</a><br/>`:``}
-      ${b.website?`<a href="${escapeHtml(b.website)}" target="_blank" rel="noopener">${escapeHtml(b.website)}</a>`:``}
-    </div></div>`:""}
-    ${alanlarHtml?`<div class="field"><label><b>Detaylar</b></label><div style="font-size:13px; color:var(--text-2);">${alanlarHtml}</div></div>`:""}
-    <div class="field"><label>Durum</label>
-      <select id="basvuruDurum" onchange="updateBasvuruDurum(this.value)">
-        ${BASVURU_DURUM.map(d=>`<option value="${d}" ${b.durum===d?"selected":""}>${durumText[d]}</option>`).join("")}
-      </select>
-    </div>
-    <div class="field"><label>Not</label>
-      <textarea id="basvuruNot" rows="3" placeholder="Yönetim notu…" style="resize:vertical; min-height:64px; line-height:1.5;">${escapeHtml(b.not_admin||"")}</textarea>
-    </div>
-  `;
+function renderKatilimTable(){
+  const el=document.getElementById("katilimTable"); if(!el) return;
+  const q=katilimSearch.toLocaleLowerCase("tr");
+  const list=katilimlar.filter(b=>(!katilimTur||b.tur===katilimTur)&&(!katilimDurum||b.durum===katilimDurum)&&(!q||[b.ad,b.email,b.telefon].filter(Boolean).join(" ").toLocaleLowerCase("tr").includes(q)));
+  const rows=list.length?list.map(b=>`<tr onclick="openKatilim('${b.id}')">
+      <td><b>${escapeHtml(b.ad)}</b><div class="st">${escapeHtml(b.email)}</div></td>
+      <td class="st">${escapeHtml(b.tur)}</td>
+      <td class="st hide-m">${escapeHtml(b.telefon||"")}</td>
+      <td>${katilimPill(b.durum)}</td>
+      <td class="st hide-m" style="white-space:nowrap;">${fmtFull(localKey(b.created_at))}</td>
+    </tr>`).join(""):`<tr><td colspan="5"><div class="list-empty">${katilimlar.length?"Aramaya uyan başvuru yok.":"Henüz başvuru yok. Linki paylaşınca burada görünecek."}</div></td></tr>`;
+  el.innerHTML=`<table class="list"><thead><tr><th>Ad / e-posta</th><th>Tür</th><th class="hide-m">Telefon</th><th>Durum</th><th class="hide-m">Tarih</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function openKatilim(id){
+  const b=katilimlar.find(x=>x.id===id); if(!b) return;
+  editingKatilimId=id;
+  const blok=(l,v)=>`<div class="field"><label>${escapeHtml(l)}</label><div style="font-size:14px; line-height:1.5; white-space:pre-wrap; word-break:break-word;">${escapeHtml(String(v))}</div></div>`;
+  // dış formdan gelen dosya adresi yalnızca kendi depomuzu gösteriyorsa bağlantı olur
+  const dosyalar=(b.dosyalar||[]).filter(f=>String(f.url||"").startsWith(SUPABASE_URL+"/storage/"));
+  document.getElementById("basvuruModalTitle").textContent=b.ad;
+  document.getElementById("basvuruDetail").innerHTML=`
+    <div style="margin-bottom:10px; font-size:13px; color:var(--text-2);">${escapeHtml(b.tur)} · ${fmtFull(localKey(b.created_at))}</div>
+    <div class="rh-actions">${kontakLinks({telefon:b.telefon,email:b.email,instagram:b.sosyal,website:b.website},"")}</div>
+    ${b.telefon?blok("Telefon",b.telefon):""}${blok("E-posta",b.email)}
+    ${(b.alanlar||[]).map(a=>blok(a.etiket,a.deger)).join("")}
+    ${dosyalar.length?`<div class="field"><label>Dosyalar</label>${dosyalar.map(f=>`<div><a href="${escapeHtml(f.url)}" target="_blank" rel="noopener" style="font-size:14px; color:var(--accent);">📎 ${escapeHtml(f.ad)}</a></div>`).join("")}</div>`:""}
+    <div class="field"><label>Durum</label><select id="katilimDurumSel">${KATILIM_DURUM.map(d=>`<option ${d===b.durum?"selected":""}>${d}</option>`).join("")}</select></div>
+    <div class="field"><label>Ekip notu</label><textarea id="katilimNot" rows="3" style="resize:vertical; min-height:64px; line-height:1.5;">${escapeHtml(b.not_admin||"")}</textarea></div>`;
   document.getElementById("basvuruOverlay").classList.add("show");
 }
-
-async function updateBasvuruDurum(durum){
-  if(!editingBasvuruId) return;
-  const not = document.getElementById("basvuruNot").value.trim();
-  const { error } = await sb.rpc("basvuru_guncelle", { p_id: editingBasvuruId, p_durum: durum, p_not: not });
-  if(error){ alert("Hata: "+error.message); return; }
-  await loadBasvurular();
-  toast("Başvuru güncellendi");
-  closeModal();
+function closeKatilim(){ document.getElementById("basvuruOverlay").classList.remove("show"); editingKatilimId=null; }
+async function saveKatilim(){
+  if(!editingKatilimId) return;
+  const { error } = await sb.from("katilim_basvurulari").update({ durum:document.getElementById("katilimDurumSel").value, not_admin:document.getElementById("katilimNot").value.trim()||null }).eq("id",editingKatilimId);
+  if(error){ alert("Kaydedilemedi: "+error.message); return; }
+  closeKatilim(); await loadKatilim(); refreshKatilim();
 }
-
-async function basvuruCsv(){
-  if(!basvurular.length){ alert("Başvuru yok"); return; }
-  const durumText = {"yeni":"Yeni", "kontakta_çıkıldı":"Kontakta çıkıldı", "seçildi":"Seçildi", "reddedildi":"Reddedildi"};
-  const rows = basvurular.map(b=>[
-    b.basvuru_turu,
-    b.ad_soyad,
-    b.email,
-    b.telefon||"",
-    b.instagram||"",
-    b.website||"",
-    durumText[b.durum],
-    fmtFull(b.created_at)
-  ]);
-  const headers = ["Başvuru türü", "Ad / Marka", "E-posta", "Telefon", "Instagram", "Website", "Durum", "Tarih"];
-  csvDownload("başvurular.csv", [headers, ...rows]);
+async function deleteKatilim(){
+  const b=katilimlar.find(x=>x.id===editingKatilimId); if(!b) return;
+  if(!confirm(`${b.ad} başvurusu ve dosyaları kalıcı olarak silinsin mi?`)) return;
+  const yollar=(b.dosyalar||[]).map(f=>f.yol).filter(y=>String(y||"").startsWith("katilim/"));
+  if(yollar.length) await sb.storage.from(FILES_BUCKET).remove(yollar);
+  const { error } = await sb.from("katilim_basvurulari").delete().eq("id",b.id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  closeKatilim(); await loadKatilim(); refreshKatilim();
 }
-
-function closeBasvuruModal(){
-  document.getElementById("basvuruOverlay").classList.remove("show");
-  editingBasvuruId = null;
+// Excel, dış formdan gelen "=..." gibi değerleri formül olarak çalıştırmasın
+function csvGuvenli(v){ const s=String(v??""); return /^[=+\-@\t\r]/.test(s) && !/^\+?[\d\s()-]+$/.test(s) ? "'"+s : s; }
+function katilimCsv(){
+  if(!katilimlar.length){ alert("Başvuru yok"); return; }
+  const rows=katilimlar.map(b=>[fmtFull(localKey(b.created_at)),b.tur,b.ad,b.email,b.telefon,b.sosyal,b.website,b.durum,(b.alanlar||[]).map(a=>`${a.etiket}: ${a.deger}`).join(" | "),(b.dosyalar||[]).map(f=>f.url).join(" "),b.not_admin].map(csvGuvenli));
+  csvDownload("basvurular.csv",[["Tarih","Tür","Ad / marka","E-posta","Telefon","Sosyal medya","Website","Durum","Detaylar","Dosyalar","Ekip notu"],...rows]);
 }
 
 function openKontak(){

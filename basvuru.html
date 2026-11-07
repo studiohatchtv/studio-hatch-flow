@@ -1,67 +1,172 @@
-<!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hatch'e Katıl — Studio Hatch</title><style>
-:root{--navy:#101d3b;--ink:#111827;--muted:#667085;--line:#d8dce3;--paper:#f5f5f3}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif}header{background:var(--navy);color:white;padding:24px max(24px,calc((100vw - 1120px)/2));display:flex;justify-content:space-between;align-items:center}header strong{font-size:20px;letter-spacing:-.7px}header span{font-size:11px;letter-spacing:2px}.hero{background:var(--navy);color:#fff;padding:100px 24px 110px}.wrap{max-width:1120px;margin:auto}.eyebrow{font-size:12px;letter-spacing:2px;text-transform:uppercase}.hero h1{font-size:clamp(58px,10vw,138px);letter-spacing:-.075em;line-height:.95;margin:25px 0}.hero p{font-size:clamp(18px,2.3vw,26px);line-height:1.45;max-width:720px;color:#dbe1ee}.section{padding:76px 24px}.section h2{font-size:clamp(32px,5vw,58px);letter-spacing:-.055em;margin:0 0 14px}.intro{max-width:660px;color:var(--muted);line-height:1.6;margin-bottom:34px}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{background:#fff;border:1px solid var(--line);padding:30px;min-height:295px;display:flex;flex-direction:column}.card small{letter-spacing:1.5px;color:#6b7485}.card h3{font-size:clamp(25px,3vw,38px);letter-spacing:-.05em;line-height:1.1;margin:22px 0 14px}.card p{color:#596273;line-height:1.55;margin:0 0 24px;max-width:440px}.card button,.primary{margin-top:auto;align-self:flex-start;border:0;background:var(--navy);color:#fff;padding:14px 18px;font-weight:700;cursor:pointer;font-size:13px}.card button:hover,.primary:hover{background:#263c70}.form-area{background:#fff;border-top:1px solid var(--line);padding:70px 24px 100px;scroll-margin-top:20px}.form-shell{max-width:800px;margin:auto}.form-shell h2{font-size:clamp(36px,5vw,60px);letter-spacing:-.06em;margin:12px 0}.form-shell>p{line-height:1.6;color:#596273}.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:30px 0}.tab{padding:12px 14px;border:1px solid var(--line);background:white;color:var(--ink);cursor:pointer}.tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}.fields{display:grid;grid-template-columns:1fr 1fr;gap:18px}.field{display:flex;flex-direction:column;gap:8px}.field.wide{grid-column:1/-1}.field label{font-size:13px;font-weight:700}.field input,.field textarea,.field select{width:100%;border:1px solid #cbd1da;background:#fff;border-radius:0;padding:13px;font:inherit;color:var(--ink)}.field textarea{min-height:115px;resize:vertical}.field input[type=file]{font-size:13px}.consent{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.5;margin:25px 0}.consent input{margin-top:3px}.notice{font-size:12px;color:#6b7485;line-height:1.6;margin:15px 0}.status{padding:12px 0;font-size:14px;color:#0F6E56;font-weight:600}.status.err{color:#c0392b}.footer{background:var(--navy);color:white;padding:35px 24px;font-size:12px;display:flex;justify-content:space-between;gap:20px}a{color:inherit}@media(max-width:700px){.hero{padding:75px 24px 85px}.cards,.fields{grid-template-columns:1fr}.card{min-height:unset}.section{padding:55px 20px}.footer{flex-direction:column}}
-</style></head><body><header><strong>STUDIO HATCH</strong><span>BALAT / BURSA</span></header><section class="hero"><div class="wrap"><div class="eyebrow">STUDIO HATCH / OPEN CALL</div><h1>HATCH'E<br>KATIL.</h1><p>Bir üretimin, atölye fikrin veya hayata geçirmek istediğin bir etkinlik varsa, tanışalım.</p></div></section><main><section class="form-area" id="basvuru"><div class="form-shell"><div class="eyebrow">BAŞVURU FORMU</div><h2>Tanışalım.</h2><p>Başvuru türünü seç, detayları bizimle paylaş. Ekibimiz uygun iş birliği fırsatlarında seninle iletişime geçecek.</p><div class="tabs" role="tablist" aria-label="Başvuru türü"><button class="tab active" data-category="designer" type="button">Tasarımcı</button><button class="tab" data-category="workshop" type="button">Atölye</button><button class="tab" data-category="event" type="button">Etkinlik</button></div><form id="application"><input type="hidden" name="basvuru_turu" id="category" value="Tasarımcı & Marka"><div class="fields" id="fields"></div><label class="consent"><input type="checkbox" id="consent" required><span>Başvurumun değerlendirilmesi amacıyla paylaştığım bilgilerin işlenmesine ilişkin KVKK aydınlatma metnini okudum ve kabul ediyorum.</span></label><p class="notice">Dosya ekleri bu formda kabul edilmez. Gönderim sonrası e-posta üzerinden paylaşabilirsiniz.</p><button class="primary" type="submit" id="submitBtn">Başvuruyu gönder ↗</button><div class="status" id="status" aria-live="polite"></div></form></div></section></main><footer class="footer"><strong>STUDIO HATCH</strong><span>Culture / Wellness / Nocturne · Balat, Bursa</span></footer><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Eser Başvurusu — MizarLabs / studio HATCH</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root{ --bg:#f6f5f1; --surface:#fff; --surface-2:#f1efe8; --text:#26251f; --text-2:#6b6a62; --text-3:#9c9b92;
+    --border:#e4e2d9; --border-2:#cfcdc2; --accent:#26215c; --radius:10px; --shadow:0 1px 2px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.05); }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{ font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+  .wrap{ max-width:560px; margin:0 auto; padding:24px 18px 60px; }
+  .head{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+  .dot{ width:30px; height:30px; border-radius:8px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; }
+  h1{ font-size:20px; font-weight:600; }
+  .sub{ color:var(--text-2); font-size:14px; margin:6px 0 20px; line-height:1.5; }
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px 18px 20px; box-shadow:var(--shadow); }
+  .field{ margin-bottom:14px; }
+  label{ display:block; font-size:13px; color:var(--text-2); margin-bottom:5px; font-weight:500; }
+  .req{ color:#c0392b; }
+  input,textarea{ width:100%; border:1px solid var(--border-2); border-radius:8px; padding:11px 12px; font-size:16px; color:var(--text); background:var(--surface); font-family:inherit; }
+  textarea{ resize:vertical; min-height:60px; line-height:1.4; }
+  input:focus,textarea:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(38,33,92,.12); }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .btn{ border:1px solid var(--border-2); background:var(--surface); color:var(--text); padding:11px 16px; border-radius:8px; font-size:15px; cursor:pointer; font-weight:500; font-family:inherit; }
+  .btn:hover{ background:var(--surface-2); }
+  .btn-primary{ background:var(--accent); color:#fff; border-color:var(--accent); width:100%; padding:14px; font-size:16px; margin-top:6px; }
+  .btn-primary:disabled{ opacity:.6; cursor:default; }
+  .linkrow{ display:flex; align-items:center; gap:6px; margin-top:6px; }
+  .linkchip{ flex:1; font-size:13px; padding:6px 10px; border-radius:8px; background:var(--surface-2); color:var(--accent); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .xbtn{ border:none; background:none; color:var(--text-3); font-size:20px; cursor:pointer; padding:0 6px; }
+  .hint{ font-size:12px; color:var(--text-3); margin-top:4px; }
+  .filelist{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .fitem{ width:80px; }
+  .fthumb{ width:80px; height:62px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:var(--surface-2); display:flex; align-items:center; justify-content:center; font-size:24px; }
+  .fthumb img{ width:100%; height:100%; object-fit:cover; }
+  .fname{ font-size:10px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .msg{ text-align:center; padding:30px 10px; }
+  .msg .big{ font-size:40px; }
+  .msg h2{ font-size:20px; font-weight:600; margin:10px 0 6px; }
+  .msg p{ color:var(--text-2); }
+  .err{ color:#c0392b; font-size:13px; margin-top:10px; min-height:16px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head"><div class="dot">M</div><h1>Eser Başvurusu</h1></div>
+  <p class="sub">MizarLabs / studio HATCH — Dijital Art. Eser(ler)inizi bizimle paylaşın; ekibimiz değerlendirip size dönecek. Aynı formu birden fazla eser için tekrar gönderebilirsiniz.</p>
+
+  <div class="card" id="formCard">
+    <div class="field"><label>Eser adı <span class="req">*</span></label><input id="eser_adi" placeholder="ör. Kırmızı Seri #3"></div>
+    <div class="field"><label>Adınız Soyadınız <span class="req">*</span></label><input id="ad" placeholder="ad soyad"></div>
+    <div class="row2">
+      <div class="field"><label>E-posta</label><input id="email" inputmode="email" placeholder="ornek@mail.com"></div>
+      <div class="field"><label>Telefon</label><input id="tel" inputmode="tel" placeholder="05xx ..."></div>
+    </div>
+    <div class="field"><label>Eser açıklaması</label><textarea id="aciklama" placeholder="teknik, boyut, konsept..."></textarea></div>
+    <div class="field"><label>Donanım ihtiyacı</label><textarea id="donanim" placeholder="ör. projeksiyon, ekran, ışık, güç kaynağı..."></textarea></div>
+
+    <div class="field">
+      <label>Eser linkleri <span class="hint">(portfolyo, Drive, Behance...)</span></label>
+      <div style="display:flex; gap:8px;">
+        <input id="linkInput" placeholder="link yapıştır" onkeydown="if(event.key==='Enter'){event.preventDefault();addLink();}">
+        <button type="button" class="btn" onclick="addLink()">Ekle</button>
+      </div>
+      <div id="linkList"></div>
+    </div>
+
+    <div class="field">
+      <label>Görsel / dosya yükle</label>
+      <input type="file" id="fileInput" accept="image/*,application/pdf" multiple onchange="onPick(event)" style="font-size:13px;">
+      <div class="filelist" id="fileList"></div>
+      <div class="hint">Fotoğraf ve PDF ekleyebilirsiniz. Görseller otomatik küçültülür.</div>
+    </div>
+
+    <button class="btn btn-primary" id="submitBtn" onclick="submitForm()">Başvuruyu gönder</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="card" id="doneCard" style="display:none;">
+    <div class="msg">
+      <div class="big">✓</div>
+      <h2>Başvurunuz alındı</h2>
+      <p>Teşekkürler! Ekibimiz eserinizi değerlendirip size dönecek.</p>
+      <p style="margin-top:14px;"><button class="btn" onclick="location.reload()">Yeni başvuru gönder</button></p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const SUPABASE_URL = "https://uolmzykwvizhmycgymfi.supabase.co";
-const SUPABASE_KEY = "sb_publishable_FIJ8mhgoXzlbhtlebcc_Bw_WLHYNFI0";
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL="https://uolmzykwvizhmycgymfi.supabase.co";
+const SUPABASE_KEY="sb_publishable_FIJ8mhgoXzlbhtlebcc_Bw_WLHYNFI0";
+const sb=window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth:{ persistSession:false } });
+const BUCKET="is-dosyalari";
 
-const shared=[['Ad soyad / Marka adı','text','name',true],['E-posta adresi','email','email',true],['Telefon numarası','tel','phone',false],['Instagram / Sosyal medya','url','social',false],['Web sitesi / Portfolyo bağlantısı','url','website',false]];
-const sets={designer:{name:'Tasarımcı & Marka',fields:[['Markanı veya üretimini kısaca anlat.','textarea','about',true],['Üretim hikâyen nedir?','textarea','story',true],['Ürün kategorileri','text','products',true],['Ürün isimleri ve satış fiyatları','textarea','prices',true],['Online satış sitesi / mağaza bağlantısı','url','shop',false],['Varsa fiziksel satış noktaların','textarea','locations',false]]},workshop:{name:'Atölye',fields:[['Atölyenin adı','text','title',true],['Atölyede neler yapılacak?','textarea','description',true],['Bu atölyeyi neden paylaşmak istiyorsun?','textarea','motivation',true],['Tahmini süre','text','duration',false],['Katılımcı kapasitesi','number','capacity',false],['Hedef kitle / yaş aralığı','text','audience',false],['Gerekli malzemeler ve teknik ihtiyaçlar','textarea','needs',false],['Önerilen kişi başı ücret (₺)','number','price',false],['Tercih edilen tarih / dönem','text','date',false]]},event:{name:'Etkinlik & İş Birliği',fields:[['Etkinlik adı / çalışma başlığı','text','title',true],['Etkinlik fikrini anlat.','textarea','description',true],['Kimleri bir araya getirmek istiyorsun?','textarea','audience',true],['Etkinlik türü','select','type',false,['Performans','Konser','Gösterim','Topluluk buluşması','Söyleşi','Diğer']],['Tahmini katılımcı sayısı','number','capacity',false],['Tarih / dönem önerisi','text','date',false],['Mekân düzeni ve teknik ihtiyaçlar','textarea','needs',false],['Biletli mi, ücretsiz mi?','select','ticket',false,['Henüz belli değil','Biletli','Ücretsiz']]}}};
+let links=[];
+let pendingFiles=[];
 
-let current='designer';
-const fields=document.getElementById('fields');
-const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-function draw(){
-  document.getElementById('category').value=sets[current].name;
-  document.querySelectorAll('.tab').forEach(x=>{x.classList.toggle('active',x.dataset.category===current);x.setAttribute('aria-selected',String(x.dataset.category===current))});
-  fields.innerHTML=[...shared,...sets[current].fields].map(([label,type,name,required,opts],i)=>{
-    const id='f'+i;
-    const req=required?'required':'';
-    let input=type==='textarea'?`<textarea id="${id}" name="${name}" ${req}></textarea>`:type==='select'?`<select id="${id}" name="${name}" ${req}><option value="">Seçiniz</option>${opts.map(o=>`<option>${esc(o)}</option>`).join('')}</select>`:`<input id="${id}" type="${type}" name="${name}" ${req}>`;
-    return `<div class="field ${type==='textarea'?'wide':''}"><label for="${id}">${esc(label)}${required?' *':''}</label>${input}</div>`;
-  }).join('');
-  document.getElementById('status').textContent='';
-  document.getElementById('consent').checked=false;
+function esc(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function addLink(){
+  const inp=document.getElementById("linkInput"); const v=inp.value.trim(); if(!v) return;
+  links.push(v); inp.value=""; inp.focus(); renderLinks();
 }
-
-document.querySelectorAll('[data-category]').forEach(b=>b.addEventListener('click',()=>{current=b.dataset.category;draw();document.getElementById('basvuru').scrollIntoView({behavior:'smooth'})}));
-
-document.getElementById('application').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const fd=new FormData(e.currentTarget);
-  const status=document.getElementById('status');
-  const submitBtn=document.getElementById('submitBtn');
-  
-  const fields_obj={};
-  for(const [k,v] of fd.entries()){if(k!=='basvuru_turu' && k!=='consent') fields_obj[k]=String(v)}
-  
-  const p_turu=sets[current].name;
-  const p_ad=fd.get('name');
-  const p_email=fd.get('email');
-  const p_telefon=fd.get('phone')||null;
-  const p_instagram=fd.get('social')||null;
-  const p_website=fd.get('website')||null;
-  
-  submitBtn.disabled=true;
-  status.textContent='Gönderiliyor…';
-  status.classList.remove('err');
-  
+function removeLink(i){ links.splice(i,1); renderLinks(); }
+function renderLinks(){
+  document.getElementById("linkList").innerHTML=links.map((l,i)=>`<div class="linkrow"><span class="linkchip">${esc(l)}</span><button type="button" class="xbtn" onclick="removeLink(${i})">&times;</button></div>`).join("");
+}
+function onPick(e){
+  for(const f of e.target.files) pendingFiles.push(f);
+  e.target.value=""; renderFiles();
+}
+function removeFile(i){ pendingFiles.splice(i,1); renderFiles(); }
+function renderFiles(){
+  document.getElementById("fileList").innerHTML=pendingFiles.map((f,i)=>{
+    const isImg=f.type.startsWith("image/");
+    const thumb=isImg?`<img src="${URL.createObjectURL(f)}">`:`📄`;
+    return `<div class="fitem"><div class="fthumb">${thumb}</div><div class="fname" title="${esc(f.name)}">${esc(f.name)}</div><button type="button" class="xbtn" onclick="removeFile(${i})" style="font-size:14px;">kaldır</button></div>`;
+  }).join("");
+}
+function compressImage(file){
+  return new Promise((resolve)=>{
+    if(!file.type.startsWith("image/")){ resolve(file); return; }
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{ const max=1600; let w=img.width,h=img.height;
+      if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c=document.createElement("canvas"); c.width=w; c.height=h; c.getContext("2d").drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url); c.toBlob(b=>resolve(b||file),"image/jpeg",0.7); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); resolve(file); };
+    img.src=url;
+  });
+}
+async function submitForm(){
+  const err=document.getElementById("err"); err.textContent="";
+  const eser_adi=document.getElementById("eser_adi").value.trim();
+  const ad=document.getElementById("ad").value.trim();
+  if(!eser_adi){ err.textContent="Lütfen eser adını girin."; return; }
+  if(!ad){ err.textContent="Lütfen adınızı girin."; return; }
+  const btn=document.getElementById("submitBtn"); btn.disabled=true; btn.textContent="Gönderiliyor…";
   try{
-    const {data,error}=await sb.rpc('basvuru_gonder',{p_turu,p_ad,p_email,p_telefon,p_instagram,p_website,p_alanlar:fields_obj});
-    if(error) throw new Error(error.message);
-    status.textContent='✓ Başvurunuz alındı! Ekibimiz en kısa sürede sizinle iletişime geçecek.';
-    e.currentTarget.reset();
-    draw();
-  }catch(err){
-    status.textContent='Hata: '+err.message;
-    status.classList.add('err');
-  }finally{
-    submitBtn.disabled=false;
+    const { data, error } = await sb.from("basvurular").insert({
+      eser_adi, basvuru_ad:ad,
+      basvuru_email:document.getElementById("email").value.trim()||null,
+      basvuru_tel:document.getElementById("tel").value.trim()||null,
+      aciklama:document.getElementById("aciklama").value.trim()||null,
+      donanim:document.getElementById("donanim").value.trim()||null,
+      linkler:links.join("\n")||null,
+      asama:"Başvuru Yaptı"
+    }).select("id").single();
+    if(error) throw error;
+    const id=data.id;
+    for(const f of pendingFiles){
+      const isImg=f.type.startsWith("image/"); const blob=isImg?await compressImage(f):f;
+      const safe=f.name.replace(/[^\w.\-]+/g,"_");
+      const path=`basvuru/public/${id}/${Date.now()}-${Math.random().toString(36).slice(2,7)}-${safe}`;
+      const { error:upErr } = await sb.storage.from(BUCKET).upload(path, blob, { contentType:isImg?"image/jpeg":(f.type||"application/octet-stream"), upsert:false });
+      if(upErr) continue;
+      const url=sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+      await sb.from("basvuru_dosyalari").insert({ basvuru_id:id, ad:f.name, yol:path, url, tur:(isImg?"image/jpeg":f.type), boyut:blob.size });
+    }
+    document.getElementById("formCard").style.display="none";
+    document.getElementById("doneCard").style.display="block";
+    window.scrollTo(0,0);
+  }catch(e){
+    console.error(e); err.textContent="Gönderilemedi: "+(e.message||e)+" — lütfen tekrar deneyin.";
+    btn.disabled=false; btn.textContent="Başvuruyu gönder";
   }
-});
-
-draw();
-</script></body></html>
+}
+</script>
+</body>
+</html>
