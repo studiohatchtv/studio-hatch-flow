@@ -463,6 +463,14 @@
   <button class="btn btn-primary" onclick="openKontak()">+ Kişi / firma</button>
 </div>
 
+<div class="toolbar" id="basvuruToolbar" style="display:none;">
+  <button class="btn" onclick="toggleSection('menu')">← Menü</button>
+  <span style="font-weight:600; font-size:15px;">📋 Başvurular</span>
+  <div class="spacer"></div>
+  <button class="btn" onclick="basvuruCsv()">⬇ CSV</button>
+  <button class="btn" onclick="window.open('https://studiohatchtv.github.io/studio-hatch-flow/basvuru','_blank')">🔗 Başvuru linki</button>
+</div>
+
 <div id="board"></div>
 </div><!-- /app -->
 
@@ -850,6 +858,15 @@
   </div>
 </div>
 
+<!-- Başvurular modal -->
+<div class="overlay" id="basvuruOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="basvuruModalTitle">Başvuru</h2><button class="icon-btn" onclick="closeBasvuruModal()">&times;</button></div>
+    <div class="modal-body" id="basvuruDetail"></div>
+    <div class="modal-foot"><button class="btn" onclick="closeBasvuruModal()">Kapat</button></div>
+  </div>
+</div>
+
 <!-- Bildirimler (inbox) modal -->
 <div class="overlay" id="inboxOverlay">
   <div class="modal" style="max-width: 440px;">
@@ -1000,7 +1017,7 @@ async function boot() {
   hasMagaza = isAdmin || hasFinance || !!(peopleRows.find(p=>p.user_id===me.id)?.magaza);
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadKayitlar(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadKayitlar(), loadBasvurular(), loadTasks()]);
   toggleSection(SECTIONS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "menu", true);
   subscribe();
   initPush();
@@ -1161,6 +1178,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"kisiler" }, loadPeople)
     .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, async()=>{ await loadContacts(); refreshRehber(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"kontak_kayitlari" }, async()=>{ await loadKayitlar(); refreshRehber(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"basvurular" }, async()=>{ await loadBasvurular(); refreshBasvurular(); refreshMenu(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"ureticiler" }, loadProducers)
@@ -1170,7 +1188,6 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"avanslar" }, loadAvanslar)
     .on("postgres_changes", { event:"*", schema:"public", table:"magaza_urunler" }, loadUrunler)
     .on("postgres_changes", { event:"*", schema:"public", table:"magaza_satislar" }, loadSatislar)
-    .on("postgres_changes", { event:"*", schema:"public", table:"basvurular" }, loadEserler)
     .on("postgres_changes", { event:"*", schema:"public", table:"basvuru_dosyalari" }, async()=>{ await loadEserFiles(); if(editingEserId) renderEserFiles(editingEserId); if(section==="dijitalart") renderEserler(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_kollari" }, async()=>{ await loadProjectsAndLines(); buildChips(); render(); })
@@ -1814,7 +1831,7 @@ async function loadProducerFiles(){
   producerFiles = data || [];
 }
 function producerFileCount(id){ return producerFiles.filter(f=>f.uretici_id===id).length; }
-const SECTIONS=["menu","isler","magaza","finans","rehber","dijitalart","ureticiler"];   // "ureticiler" → Mağaza içindeki sekme
+const SECTIONS=["menu","isler","magaza","finans","rehber","basvurular","dijitalart","ureticiler"];   // "ureticiler" → Mağaza içindeki sekme
 function toggleSection(s, fromHistory){
   if(s==="ureticiler"){ magazaView="ureticiler"; s="magaza"; }
   if(s==="finans" && !hasFinance) s="menu";
@@ -1826,7 +1843,7 @@ function toggleSection(s, fromHistory){
     if(s==="menu") history.pushState(null,"",location.pathname+location.search);
     else history.pushState(null,"","#"+s);
   }
-  [["taskToolbar","isler"],["prodToolbar","ureticiler"],["finansToolbar","finans"],["eserToolbar","dijitalart"],["magazaToolbar","magaza"],["rehberToolbar","rehber"]]
+  [["taskToolbar","isler"],["prodToolbar","ureticiler"],["finansToolbar","finans"],["eserToolbar","dijitalart"],["magazaToolbar","magaza"],["rehberToolbar","rehber"],["basvuruToolbar","basvurular"]]
     .forEach(([id,k])=>document.getElementById(id).style.display = s===k ? "flex" : "none");
   toggleCart(false);
   window.scrollTo(0,0);
@@ -1859,11 +1876,13 @@ function renderMenu(){
   const tile=(key,ico,bg,title,sub,badge,onclick)=>`<button class="tile" onclick="${onclick||`toggleSection('${key}')`}">
       ${badge?`<span class="tb">${badge}</span>`:""}
       <div class="ico" style="background:${bg};">${ico}</div><div class="tt">${title}</div><div class="ts">${sub}</div></button>`;
+  const yeniBasvuru=basvurular.filter(b=>b.durum==="yeni").length;
   const tiles=[
     tile("isler","📋","#EEEDFE","İşler", `${mine.length} açık görevin${acil?` · <b style="color:#c0392b">${acil} acil</b>`:""}`, gecTask?`${gecTask} gecikmiş`:""),
     hasMagaza?tile("magaza","🛍️","#E1F5EE","Mağaza", `Bugün ${bugun.length} satış · ${fmtMoney(bugun.reduce((s,x)=>s+Number(x.toplam||0),0))}<br>${producers.length} üretici · ${urunler.length} ürün`, ""):"",
     hasFinance?tile("finans","🏦","#E6F1FB","Finans", `Bekleyen ödeme: ${fmtMoney(bekOd.reduce((s,o)=>s+Number(o.tutar||0),0))}`, gecOd?`${gecOd} gecikmiş`:""):"",
     tile("rehber","📇","#FAEEDA","Rehber", `${contacts.length} kişi / firma · influencer, partner…`, takip?`${takip} takip`:""),
+    me && me.is_admin?tile("basvurular","📋","#F0E6FB","Başvurular", `${basvurular.length} başvuru`, yeniBasvuru?`${yeniBasvuru} yeni`:""):"",
     tile("dijitalart","🎨","#FBEAF0","Dijital Art", `${eserler.length} eser${yeniBas?` · ${yeniBas} yeni başvuru`:""}`, ""),
     tile("ekip","👥","#EAF3DE","Ekip", `${peopleRows.length} kişi`, "", "openPeople()"),
   ].join("");
@@ -2572,6 +2591,141 @@ function fillKontakSelects(){
   const tags=[...new Set(contacts.flatMap(c=>c.etiketler||[]))].sort((a,b)=>a.localeCompare(b,"tr"));
   document.getElementById("knEtiketList").innerHTML=tags.map(x=>`<option value="${escapeHtml(x)}">`).join("");
 }
+
+/* başvurular */
+const BASVURU_TURU = ["Tasarımcı & Marka", "Atölye", "Etkinlik & İş Birliği"];
+const BASVURU_DURUM = ["yeni", "kontakta_çıkıldı", "seçildi", "reddedildi"];
+let basvurular = [];
+let basvuruView = "liste";
+let basvuruSearch = "", basvuruTuru = "";
+let editingBasvuruId = null;
+
+async function loadBasvurular(){
+  try{ basvurular = await fetchAll("basvurular","created_at",false); }
+  catch(e){ console.error("basvurular:", e.message); basvurular=[]; }
+}
+
+function refreshBasvurular(){
+  if(section!=="basvurular") return;
+  renderBasvurular();
+}
+
+function setBasvuruView(v){
+  basvuruView = v;
+  renderBasvurular();
+}
+
+function basvuruFiltre(b){
+  const q = basvuruSearch.toLocaleLowerCase("tr");
+  if(q && !([b.ad_soyad, b.email, b.telefon].filter(Boolean).join(" ").toLocaleLowerCase("tr").includes(q))) return false;
+  if(basvuruTuru && b.basvuru_turu !== basvuruTuru) return false;
+  return true;
+}
+
+function renderBasvurular(){
+  const board = document.getElementById("board"); board.className = "";
+  const list = basvurular.filter(basvuruFiltre).sort((a,b)=>new Date(b.created_at) - new Date(a.created_at));
+  const say = t => basvurular.filter(b=>b.basvuru_turu===t).length;
+  const yeni = b => b.durum === "yeni" ? 1 : 0;
+  const yeniSay = list.reduce((s,b)=>s+yeni(b),0);
+
+  const rows = list.length ? list.map(b => {
+    const durumRenk = {"yeni":"#fceeee", "kontakta_çıkıldı":"#E6F1FB", "seçildi":"#E1F5EE", "reddedildi":"#FAEEDA"};
+    const durumText = {"yeni":"Yeni", "kontakta_çıkıldı":"Kontakta çıkıldı", "seçildi":"Seçildi", "reddedildi":"Reddedildi"};
+    return `<tr onclick="openBasvuruDetail('${b.id}')">
+      <td><b>${escapeHtml(b.basvuru_turu)}</b><div class="st">${escapeHtml(b.ad_soyad)}</div></td>
+      <td>${escapeHtml(b.email)}</td>
+      <td class="st hide-m">${escapeHtml(b.telefon||"-")}</td>
+      <td><span class="pill" style="background:${durumRenk[b.durum]}; color:var(--text);">${durumText[b.durum]}</span></td>
+      <td class="st hide-m">${fmtFull(b.created_at)}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="5"><div class="list-empty">${basvurular.length?"Aramaya uyan kayıt yok.":"Henüz başvuru yok."}</div></td></tr>`;
+
+  board.innerHTML=`<div class="listwrap">
+    <div class="stats">
+      <div class="stat ${yeniSay?"danger":""}"><span class="n">${basvurular.length}</span><span class="l">Toplam başvuru</span></div>
+      <div class="stat"><span class="n">${say("Tasarımcı & Marka")}</span><span class="l">Tasarımcı</span></div>
+      <div class="stat"><span class="n">${say("Atölye")}</span><span class="l">Atölye</span></div>
+      <div class="stat"><span class="n">${say("Etkinlik & İş Birliği")}</span><span class="l">Etkinlik</span></div>
+      <div class="stat ${yeniSay?"danger":""}"><span class="n">${yeniSay}</span><span class="l">Yeni başvuru</span></div>
+    </div>
+    <div class="mg-filters">
+      <input placeholder="Ad, e-posta ara…" value="${escapeHtml(basvuruSearch)}" oninput="basvuruSearch=this.value; renderBasvurular()">
+      <select onchange="basvuruTuru=this.value; renderBasvurular()">
+        <option value="">Tüm türler</option>
+        ${BASVURU_TURU.map(t=>`<option ${t===basvuruTuru?"selected":""}>${t}</option>`).join("")}
+      </select>
+    </div>
+    <table class="list">
+      <thead><tr><th>Başvuru türü / Ad</th><th>E-posta</th><th class="hide-m">Telefon</th><th>Durum</th><th class="hide-m">Tarih</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+async function openBasvuruDetail(id){
+  editingBasvuruId = id;
+  const b = basvurular.find(x=>x.id===id);
+  if(!b) return;
+  const durumText = {"yeni":"Yeni", "kontakta_çıkıldı":"Kontakta çıkıldı", "seçildi":"Seçildi", "reddedildi":"Reddedildi"};
+  const alanlarHtml = Object.entries(b.alanlar||{}).map(([k,v])=>`
+    <div><b>${escapeHtml(k)}:</b> ${typeof v==="object"?JSON.stringify(v):escapeHtml(String(v||""))}</div>
+  `).join("");
+
+  document.getElementById("basvuruModalTitle").textContent = b.basvuru_turu;
+  document.getElementById("basvuruDetail").innerHTML = `
+    <div class="field"><label><b>Ad / Marka</b></label><div>${escapeHtml(b.ad_soyad)}</div></div>
+    <div class="field"><label><b>E-posta</b></label><div>${escapeHtml(b.email)}</div></div>
+    <div class="field"><label><b>Telefon</b></label><div>${escapeHtml(b.telefon||"-")}</div></div>
+    ${[b.instagram, b.website].filter(Boolean).length?`<div class="field"><label><b>İletişim</b></label><div>
+      ${b.instagram?`<a href="https://instagram.com/${escapeHtml(b.instagram)}" target="_blank" rel="noopener">Instagram: @${escapeHtml(b.instagram)}</a><br/>`:``}
+      ${b.website?`<a href="${escapeHtml(b.website)}" target="_blank" rel="noopener">${escapeHtml(b.website)}</a>`:``}
+    </div></div>`:""}
+    ${alanlarHtml?`<div class="field"><label><b>Detaylar</b></label><div style="font-size:13px; color:var(--text-2);">${alanlarHtml}</div></div>`:""}
+    <div class="field"><label>Durum</label>
+      <select id="basvuruDurum" onchange="updateBasvuruDurum(this.value)">
+        ${BASVURU_DURUM.map(d=>`<option value="${d}" ${b.durum===d?"selected":""}>${durumText[d]}</option>`).join("")}
+      </select>
+    </div>
+    <div class="field"><label>Not</label>
+      <textarea id="basvuruNot" rows="3" placeholder="Yönetim notu…" style="resize:vertical; min-height:64px; line-height:1.5;">${escapeHtml(b.not_admin||"")}</textarea>
+    </div>
+  `;
+  document.getElementById("basvuruOverlay").classList.add("show");
+}
+
+async function updateBasvuruDurum(durum){
+  if(!editingBasvuruId) return;
+  const not = document.getElementById("basvuruNot").value.trim();
+  const { error } = await sb.rpc("basvuru_guncelle", { p_id: editingBasvuruId, p_durum: durum, p_not: not });
+  if(error){ alert("Hata: "+error.message); return; }
+  await loadBasvurular();
+  toast("Başvuru güncellendi");
+  closeModal();
+}
+
+async function basvuruCsv(){
+  if(!basvurular.length){ alert("Başvuru yok"); return; }
+  const durumText = {"yeni":"Yeni", "kontakta_çıkıldı":"Kontakta çıkıldı", "seçildi":"Seçildi", "reddedildi":"Reddedildi"};
+  const rows = basvurular.map(b=>[
+    b.basvuru_turu,
+    b.ad_soyad,
+    b.email,
+    b.telefon||"",
+    b.instagram||"",
+    b.website||"",
+    durumText[b.durum],
+    fmtFull(b.created_at)
+  ]);
+  const headers = ["Başvuru türü", "Ad / Marka", "E-posta", "Telefon", "Instagram", "Website", "Durum", "Tarih"];
+  csvDownload("başvurular.csv", [headers, ...rows]);
+}
+
+function closeBasvuruModal(){
+  document.getElementById("basvuruOverlay").classList.remove("show");
+  editingBasvuruId = null;
+}
+
 function openKontak(){
   editingKontakId=null; fillKontakSelects();
   document.getElementById("kontakModalTitle").textContent="Yeni kişi / firma";
