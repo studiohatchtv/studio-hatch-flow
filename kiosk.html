@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>studio HATCH — Tanışalım</title>
+<style>
+:root{--navy:#101d3b;--navy2:#263c70;--ink:#111827;--muted:#667085;--line:#d8dce3;--paper:#f5f5f3;--ok:#0F6E56;--err:#c0392b;--u:min(1vh,0.6vw)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{background:var(--paper);color:var(--ink);font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.screen{position:fixed;inset:0;display:none;flex-direction:column}
+.screen.on{display:flex}
+
+/* karşılama */
+#welcome{background:var(--navy);color:#fff;justify-content:center;align-items:flex-start;padding:0 8vw;cursor:pointer}
+#welcome .eyebrow{font-size:calc(var(--u)*2);letter-spacing:.2em;opacity:.75}
+#welcome h1{font-size:calc(var(--u)*13);letter-spacing:-.06em;line-height:.95;margin:calc(var(--u)*3) 0}
+#welcome p{font-size:calc(var(--u)*3.4);line-height:1.4;max-width:60ch;color:#dbe1ee}
+#welcome .start{margin-top:calc(var(--u)*6);background:#fff;color:var(--navy);font-weight:700;font-size:calc(var(--u)*3.4);padding:calc(var(--u)*2.6) calc(var(--u)*5);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.04)}}
+
+/* form */
+#form header{background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:calc(var(--u)*2) 4vw}
+#form header strong{font-size:calc(var(--u)*2.6);letter-spacing:-.02em}
+#form header button{color:#fff;font-size:calc(var(--u)*2.2);padding:calc(var(--u)*1.2) calc(var(--u)*2.4);border:1px solid rgba(255,255,255,.4)}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:4vw;padding:calc(var(--u)*3.5) 4vw calc(var(--u)*2);overflow:hidden}
+h2{font-size:calc(var(--u)*4.4);letter-spacing:-.04em;margin-bottom:calc(var(--u)*2.4)}
+.lbl{font-size:calc(var(--u)*2);font-weight:700;margin-bottom:calc(var(--u)*1);display:flex;justify-content:space-between}
+.lbl small{font-weight:400;color:var(--muted)}
+.inp{display:block;width:100%;text-align:left;background:#fff;border:2px solid var(--line);min-height:calc(var(--u)*7.5);padding:0 calc(var(--u)*2);font-size:calc(var(--u)*3.2);margin-bottom:calc(var(--u)*2.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:calc(var(--u)*7.5)}
+.inp.act{border-color:var(--navy);box-shadow:0 0 0 calc(var(--u)*.5) rgba(16,29,59,.15)}
+.inp.bad{border-color:var(--err)}
+.inp .ph{color:#a0a6b1}
+.inp.act::after{content:"";display:inline-block;width:2px;height:1em;background:var(--navy);vertical-align:-.12em;margin-left:2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.chips{display:flex;flex-wrap:wrap;gap:calc(var(--u)*1.2);margin-bottom:calc(var(--u)*3)}
+.chip{border:2px solid var(--line);background:#fff;padding:calc(var(--u)*1.5) calc(var(--u)*2.2);font-size:calc(var(--u)*2.3)}
+.chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.chip.on::before{content:"✓ "}
+.izin{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*1.2);margin-bottom:calc(var(--u)*1.5)}
+.izin .chip{text-align:left;font-size:calc(var(--u)*2.4);padding:calc(var(--u)*2) calc(var(--u)*2.2)}
+.note{font-size:calc(var(--u)*1.6);color:var(--muted);line-height:1.45}
+.msg{font-size:calc(var(--u)*2.2);color:var(--err);min-height:calc(var(--u)*3);margin-top:calc(var(--u)*1)}
+.send{background:var(--navy);color:#fff;font-weight:700;font-size:calc(var(--u)*3);padding:calc(var(--u)*2.4) calc(var(--u)*5);margin-top:calc(var(--u)*1.5)}
+.send:disabled{opacity:.5}
+
+/* klavye */
+#kb{background:#d9dce2;padding:calc(var(--u)*1.2) 2vw calc(var(--u)*1.6);display:none}
+#kb.on{display:block}
+.kr{display:flex;justify-content:center;gap:calc(var(--u)*.9);margin-bottom:calc(var(--u)*.9)}
+.k{flex:0 0 auto;width:calc(var(--u)*8.2);height:calc(var(--u)*7.4);background:#fff;border-radius:calc(var(--u)*.8);font-size:calc(var(--u)*3);box-shadow:0 2px 0 #a9adb6;display:flex;align-items:center;justify-content:center}
+.k:active,.k.down{background:#c5cad3;transform:translateY(1px)}
+.k.w2{width:calc(var(--u)*13)}
+.k.w3{width:calc(var(--u)*18)}
+.k.sp{width:calc(var(--u)*50)}
+.k.dk{background:#aeb3bd}
+.k.go{background:var(--navy);color:#fff;font-weight:700;font-size:calc(var(--u)*2.4)}
+.k.sm{font-size:calc(var(--u)*2.1)}
+.k.num{width:calc(var(--u)*14);height:calc(var(--u)*8)}
+
+/* teşekkür */
+#thanks{background:var(--navy);color:#fff;justify-content:center;align-items:center;text-align:center;padding:0 8vw}
+#thanks h1{font-size:calc(var(--u)*10);letter-spacing:-.05em;margin-bottom:calc(var(--u)*3)}
+#thanks p{font-size:calc(var(--u)*3.2);color:#dbe1ee;line-height:1.4}
+
+@media (orientation:portrait){
+  :root{--u:min(0.8vh,1vw)}
+  .body{grid-template-columns:1fr;overflow-y:auto}
+}
+</style>
+</head>
+<body>
+
+<section class="screen on" id="welcome" onclick="basla()">
+  <div class="eyebrow">STUDIO HATCH</div>
+  <h1>Tanışalım.</h1>
+  <p>Atölyelerden, etkinliklerden ve mağazaya gelen yeni ürünlerden ilk sen haberdar ol. Bilgilerini bırakman bir dakika sürer.</p>
+  <button class="start">Başlamak için dokun</button>
+</section>
+
+<section class="screen" id="form">
+  <header><strong>STUDIO HATCH</strong><button onclick="sifirla()">Vazgeç</button></header>
+  <div class="body" id="formBody">
+    <div>
+      <h2>Bilgilerin</h2>
+      <div class="lbl">Ad soyad</div>
+      <button class="inp" data-f="ad"></button>
+      <div class="lbl">Telefon <small id="telNot"></small></div>
+      <button class="inp" data-f="telefon"></button>
+      <div class="lbl">E-posta <small id="mailNot"></small></div>
+      <button class="inp" data-f="email"></button>
+    </div>
+    <div>
+      <h2>Neler ilgini çeker?</h2>
+      <div class="chips" id="ilgiler"></div>
+      <div class="lbl">Sana nasıl ulaşalım?</div>
+      <div class="izin">
+        <button class="chip" id="izEposta" onclick="izinDegis('eposta')">E-posta ile</button>
+        <button class="chip" id="izTelefon" onclick="izinDegis('telefon')">Telefon ile (arama / SMS)</button>
+      </div>
+      <p class="note" id="izinMetni"></p>
+      <div class="msg" id="msg"></div>
+      <button class="send" id="sendBtn" onclick="gonder()">Gönder</button>
+    </div>
+  </div>
+  <div id="kb"></div>
+</section>
+
+<section class="screen" id="thanks">
+  <h1>Teşekkürler!</h1>
+  <p id="thanksTxt">Bilgilerin bize ulaştı. Görüşmek üzere.</p>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const sb = window.supabase.createClient("https://uolmzykwvizhmycgymfi.supabase.co", "sb_publishable_FIJ8mhgoXzlbhtlebcc_Bw_WLHYNFI0",
+  { auth:{ persistSession:false, autoRefreshToken:false, detectSessionInUrl:false } });
+
+// İlgi konularını buradan düzenleyin
+const ILGI = ["Atölyeler","Etkinlikler & konserler","Sergiler & dijital sanat","Immersive deneyimler","Wellness","Nocturne","Tasarım ürünleri & mağaza","Kurumsal etkinlik & mekân"];
+const IZIN_METIN = {
+  eposta: "E-posta yoluyla",
+  telefon: "telefon (arama ve SMS) yoluyla",
+};
+const BOS_SURE = 90, TESEKKUR_SURE = 7;   // saniye
+
+const PH = { ad:"Adın ve soyadın", telefon:"05xx xxx xx xx", email:"ornek@mail.com" };
+const SIRA = ["ad","telefon","email"];
+let v, ilgi, izin, aktif, shift, gonderiliyor=false, bosTimer, tesekkurTimer;
+
+function temiz(){ v={ad:"",telefon:"",email:""}; ilgi=new Set(); izin={eposta:false,telefon:false}; aktif=null; shift=false; }
+function goster(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); }
+function basla(){
+  try{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(()=>{}); }catch(e){}
+  temiz(); ciz(); goster("form"); aktifEt("ad"); dokunuldu();
+}
+function sifirla(){
+  clearTimeout(bosTimer); clearTimeout(tesekkurTimer);
+  temiz(); ciz(); goster("welcome");
+}
+function dokunuldu(){
+  clearTimeout(bosTimer);
+  if(document.getElementById("form").classList.contains("on")) bosTimer=setTimeout(sifirla, BOS_SURE*1000);
+}
+document.addEventListener("pointerdown", dokunuldu, true);
+document.addEventListener("contextmenu", e=>e.preventDefault());
+
+function telGoster(t){ const d=t.replace(/\D/g,""); return [d.slice(0,4),d.slice(4,7),d.slice(7,9),d.slice(9,11)].filter(Boolean).join(" "); }
+function ciz(){
+  document.querySelectorAll(".inp").forEach(el=>{
+    const f=el.dataset.f; const val=f==="telefon"?telGoster(v[f]):v[f];
+    el.classList.toggle("act", aktif===f);
+    el.innerHTML = val ? esc(val) : (aktif===f ? "" : `<span class="ph">${PH[f]}</span>`);
+  });
+  document.getElementById("ilgiler").innerHTML=ILGI.map((x,i)=>`<button class="chip ${ilgi.has(x)?"on":""}" onclick="ilgiDegis(${i})">${esc(x)}</button>`).join("");
+  document.getElementById("izEposta").classList.toggle("on", izin.eposta);
+  document.getElementById("izTelefon").classList.toggle("on", izin.telefon);
+  document.getElementById("telNot").textContent = izin.telefon ? "zorunlu" : "";
+  document.getElementById("mailNot").textContent = izin.eposta ? "zorunlu" : "";
+  document.getElementById("izinMetni").textContent = izinMetni() || "Sana hangi kanaldan ulaşabileceğimizi seç. İznini istediğin zaman geri alabilirsin.";
+  document.getElementById("msg").textContent="";
+  klavyeCiz();
+}
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function izinMetni(){
+  const k=[izin.eposta&&IZIN_METIN.eposta, izin.telefon&&IZIN_METIN.telefon].filter(Boolean);
+  if(!k.length) return "";
+  return `${k.join(" ve ")} studio HATCH'in etkinlik, atölye, ürün ve kampanyalarıyla ilgili bilgilendirme ve ticari ileti almayı kabul ediyorum. Bilgilerim bu amaçla saklanır; iznimi istediğim zaman geri alabilirim.`.replace(/^./,c=>c.toLocaleUpperCase("tr"));
+}
+function ilgiDegis(i){ const x=ILGI[i]; ilgi.has(x)?ilgi.delete(x):ilgi.add(x); aktif=null; ciz(); }
+function izinDegis(k){ izin[k]=!izin[k]; aktif=null; ciz(); }
+function aktifEt(f){ aktif=f; shift = f==="ad" && (v.ad==="" || v.ad.endsWith(" ")); ciz(); }
+document.querySelectorAll(".inp").forEach(el=>el.addEventListener("click",()=>aktifEt(el.dataset.f)));
+
+/* klavye */
+const HARF_TR=[["q","w","e","r","t","y","u","ı","o","p","ğ","ü"],["a","s","d","f","g","h","j","k","l","ş","i"],["⇧","z","x","c","v","b","n","m","ö","ç","⌫"]];
+const HARF_EN=[["1","2","3","4","5","6","7","8","9","0"],["q","w","e","r","t","y","u","i","o","p"],["a","s","d","f","g","h","j","k","l","-"],["z","x","c","v","b","n","m",".","_","⌫"]];
+const NUM=[["1","2","3"],["4","5","6"],["7","8","9"],["+","0","⌫"]];
+function buyuk(c){ return c==="i"?"İ":c==="ı"?"I":c.toLocaleUpperCase("tr"); }
+function tus(lbl, cls, data){ return `<button class="k ${cls||""}" data-k="${esc(data??lbl)}">${esc(lbl)}</button>`; }
+function klavyeCiz(){
+  const kb=document.getElementById("kb");
+  if(!aktif){ kb.classList.remove("on"); kb.innerHTML=""; return; }
+  kb.classList.add("on");
+  const son = aktif==="email" ? "Tamam ✓" : "Sonraki →";
+  let h="";
+  if(aktif==="telefon"){
+    h=NUM.map(r=>`<div class="kr">${r.map(c=>tus(c, "num"+(c==="⌫"?" dk":""))).join("")}</div>`).join("")
+      .replace(/<\/div>$/, tus(son,"go w3","__ok")+"</div>");
+  } else if(aktif==="email"){
+    h=HARF_EN.map(r=>`<div class="kr">${r.map(c=>tus(c, c==="⌫"?"dk":"")).join("")}</div>`).join("");
+    h+=`<div class="kr">${tus("@","w2")}${["@gmail.com","@hotmail.com","@icloud.com",".com"].map(x=>tus(x,"w3 sm")).join("")}${tus("Temizle","w2 dk sm","__sil")}${tus(son,"go w3","__ok")}</div>`;
+  } else {
+    h=HARF_TR.map(r=>`<div class="kr">${r.map(c=>c==="⇧"?tus("⇧","w2 dk"+(shift?" down":""),"__shift"):c==="⌫"?tus("⌫","w2 dk"):tus(shift?buyuk(c):c)).join("")}</div>`).join("");
+    h+=`<div class="kr">${tus("-","")}${tus("boşluk","sp sm"," ")}${tus(".","")}${tus(son,"go w3","__ok")}</div>`;
+  }
+  kb.innerHTML=h;
+}
+document.getElementById("kb").addEventListener("pointerdown", e=>{
+  const b=e.target.closest(".k"); if(!b) return;
+  e.preventDefault();
+  const k=b.dataset.k, f=aktif; if(!f) return;
+  if(k==="__ok"){ const i=SIRA.indexOf(f); aktif = i<SIRA.length-1 ? SIRA[i+1] : null; shift = aktif==="ad"; ciz(); return; }
+  if(k==="__shift"){ shift=!shift; klavyeCiz(); return; }
+  if(k==="__sil"){ v[f]=""; ciz(); return; }
+  if(k==="⌫"){ v[f]=v[f].slice(0,-1); }
+  else {
+    const max={ad:80,telefon:14,email:80}[f];
+    if(v[f].length>=max) return;
+    if(f==="telefon" && k==="+" && v[f]) return;
+    if(f==="email" && k.startsWith("@") && v[f].includes("@")) return;
+    v[f]+=k;
+  }
+  if(f==="ad"){ shift = v.ad==="" || v.ad.endsWith(" ") || v.ad.endsWith("-"); }
+  ciz();
+});
+
+function hata(t, alan){
+  document.getElementById("msg").textContent=t;
+  if(alan){ const el=document.querySelector(`.inp[data-f="${alan}"]`); el.classList.add("bad"); setTimeout(()=>el.classList.remove("bad"),2500); }
+}
+async function gonder(){
+  if(gonderiliyor) return;
+  aktif=null; ciz();
+  const ad=v.ad.trim().replace(/\s+/g," "), tel=v.telefon.replace(/[^\d+]/g,""), mail=v.email.trim().toLowerCase();
+  if(ad.length<2) return hata("Lütfen adını ve soyadını yaz.","ad");
+  if(!izin.eposta && !izin.telefon) return hata("Sana nasıl ulaşalım? E-posta veya telefon seç.");
+  if(izin.telefon && !tel) return hata("Telefonla ulaşabilmemiz için numaranı yaz.","telefon");
+  if(izin.eposta && !mail) return hata("E-postayla ulaşabilmemiz için adresini yaz.","email");
+  if(tel){ const d=tel.replace(/\D/g,""); if(d.length<10||d.length>13) return hata("Telefon numarası eksik görünüyor.","telefon"); }
+  if(mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return hata("E-posta adresini kontrol et.","email");
+  gonderiliyor=true; const btn=document.getElementById("sendBtn"); btn.disabled=true; btn.textContent="Gönderiliyor…";
+  try{
+    const { error } = await sb.rpc("ziyaretci_kaydet", { p_ad:ad, p_telefon:tel||null, p_email:mail||null,
+      p_izin_eposta:izin.eposta, p_izin_telefon:izin.telefon, p_ilgi:[...ilgi], p_izin_metni:izinMetni() });
+    if(error) throw error;
+    clearTimeout(bosTimer);
+    document.getElementById("thanksTxt").textContent=`${ad.split(" ")[0]}, bilgilerin bize ulaştı. Görüşmek üzere!`;
+    temiz(); ciz(); goster("thanks");
+    tesekkurTimer=setTimeout(sifirla, TESEKKUR_SURE*1000);
+  }catch(e){
+    console.error(e);
+    hata(navigator.onLine ? "Kaydedilemedi, lütfen tekrar dene." : "İnternet bağlantısı yok. Lütfen tekrar dene.");
+  }finally{
+    gonderiliyor=false; btn.disabled=false; btn.textContent="Gönder";
+  }
+}
+document.getElementById("thanks").addEventListener("click", sifirla);
+temiz(); ciz();
+</script>
+</body>
+</html>

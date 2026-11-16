@@ -438,6 +438,7 @@
     <button class="vt" id="mvGecmis" onclick="setMagazaView('gecmis')">Satış geçmişi</button>
     <button class="vt" id="mvRapor" onclick="setMagazaView('rapor')">Rapor</button>
     <button class="vt" id="mvUretici" onclick="setMagazaView('ureticiler')">Üreticiler</button>
+    <button class="vt" id="mvZiyaretci" onclick="setMagazaView('ziyaretci')">Ziyaretçiler</button>
   </div>
   <div class="spacer"></div>
   <span id="magazaMonthNav" style="display:none; align-items:center; gap:8px;">
@@ -784,6 +785,17 @@
 </div>
 
 <!-- Mağaza satış detay modal -->
+<div class="overlay" id="ziyaretciOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="zyModalTitle">Ziyaretçi</h2><button class="icon-btn" onclick="closeZiyaretci()">&times;</button></div>
+    <div class="modal-body" id="zyDetail"></div>
+    <div class="modal-foot">
+      <button class="link-danger" onclick="deleteZiyaretci()">Sil</button>
+      <div style="display:flex; gap:8px;"><button class="btn" onclick="closeZiyaretci()">Vazgeç</button><button class="btn btn-primary" onclick="saveZiyaretci()">Kaydet</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="satisOverlay">
   <div class="modal">
     <div class="modal-head"><h2 id="satisModalTitle">Satış</h2><button class="icon-btn" onclick="closeSatis()">&times;</button></div>
@@ -1021,7 +1033,7 @@ async function boot() {
   hasMagaza = isAdmin || hasFinance || !!(peopleRows.find(p=>p.user_id===me.id)?.magaza);
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadKayitlar(), loadKatilim(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadZiyaretciler(), loadKayitlar(), loadKatilim(), loadTasks()]);
   toggleSection(SECTIONS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "menu", true);
   subscribe();
   initPush();
@@ -1192,6 +1204,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"avanslar" }, loadAvanslar)
     .on("postgres_changes", { event:"*", schema:"public", table:"magaza_urunler" }, loadUrunler)
     .on("postgres_changes", { event:"*", schema:"public", table:"magaza_satislar" }, loadSatislar)
+    .on("postgres_changes", { event:"*", schema:"public", table:"magaza_ziyaretcileri" }, loadZiyaretciler)
     .on("postgres_changes", { event:"*", schema:"public", table:"basvurular" }, loadEserler)
     .on("postgres_changes", { event:"*", schema:"public", table:"basvuru_dosyalari" }, async()=>{ await loadEserFiles(); if(editingEserId) renderEserFiles(editingEserId); if(section==="dijitalart") renderEserler(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"projeler" }, async()=>{ await loadProjectsAndLines(); render(); })
@@ -2821,6 +2834,7 @@ function refreshMagaza(){
   if(section!=="magaza") return;
   if(magazaView==="satis" && document.getElementById("mgCards")){ renderMgCards(); renderMgCart(); return; }
   if(magazaView==="urunler" && document.getElementById("mgUrunTable")){ renderUrunTable(); return; }
+  if(magazaView==="ziyaretci" && document.getElementById("zyTable")){ renderZiyaretciTable(); return; }
   if(magazaView==="ureticiler") return;   // üretici panosu ürün değişince yeniden çizilmesin (sürükle-bırak bozulmasın)
   renderMagaza();
 }
@@ -2856,7 +2870,7 @@ function magazaSetupBox(){
 }
 function setMagazaView(v){
   magazaView=v;
-  [["satis","mvSatis"],["urunler","mvUrunler"],["gecmis","mvGecmis"],["rapor","mvRapor"],["ureticiler","mvUretici"]].forEach(([k,id])=>document.getElementById(id).classList.toggle("active", v===k));
+  [["satis","mvSatis"],["urunler","mvUrunler"],["gecmis","mvGecmis"],["rapor","mvRapor"],["ureticiler","mvUretici"],["ziyaretci","mvZiyaretci"]].forEach(([k,id])=>document.getElementById(id).classList.toggle("active", v===k));
   document.getElementById("magazaMonthNav").style.display = (v==="gecmis"||v==="rapor") ? "inline-flex" : "none";
   document.getElementById("magazaCsvBtn").style.display = (v!=="satis" && v!=="ureticiler") ? "inline-flex" : "none";
   document.getElementById("magazaImportBtn").style.display = (v==="urunler" && isAdmin) ? "inline-flex" : "none";
@@ -2869,7 +2883,104 @@ function renderMagaza(){
   if(magazaView==="gecmis") return renderMagazaGecmis();
   if(magazaView==="rapor") return renderMagazaRapor();
   if(magazaView==="ureticiler") return renderProducers();
+  if(magazaView==="ziyaretci") return renderZiyaretci();
   return renderMagazaSatis();
+}
+
+/* mağaza — ziyaretçiler (dokunmatik ekrandan bırakılan iletişim bilgileri) */
+const ZY_DURUM = ["Yeni","İletişime geçildi","Ulaşılamadı"];
+const ZY_RENK = { "Yeni":["#fceeee","#c0392b"], "İletişime geçildi":["#E1F5EE","#0F6E56"], "Ulaşılamadı":["#f1efe8","#6b6a62"] };
+let ziyaretciler = [], zyHata = "", zySearch = "", zyIlgi = "", zyIzin = "", zyDurum = "", editingZyId = null;
+async function loadZiyaretciler(){
+  if(!hasMagaza) return;
+  try{ ziyaretciler = await fetchAll("magaza_ziyaretcileri","created_at",false); zyHata=""; }
+  catch(e){ console.error("magaza_ziyaretcileri:", e.message); ziyaretciler=[]; zyHata=e.message; }
+  refreshMagaza();
+}
+function kioskLink(){ return new URL("kiosk",location.href.split("#")[0].replace(/index\.html$/,"")).href; }
+function zyIzinler(z){ return [z.izin_eposta?"E-posta":"", z.izin_telefon?"Telefon":""].filter(Boolean); }
+function renderZiyaretci(){
+  const board=document.getElementById("board"); board.className="";
+  const buAy=localKey(new Date().toISOString()).slice(0,7);
+  const say={}; ziyaretciler.forEach(z=>(z.ilgi||[]).forEach(i=>say[i]=(say[i]||0)+1));
+  const ilgiler=Object.keys(say).sort((a,b)=>say[b]-say[a]);
+  board.innerHTML=`<div class="listwrap">
+    ${zyHata?`<div class="mg-warn">Ziyaretçiler yüklenemedi. Supabase SQL Editor'de <b>update-ziyaretci.sql</b> dosyasını çalıştırın.</div>`:""}
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; font-size:13px; color:var(--text-2);">
+      <span style="flex:1; min-width:220px;">Dükkândaki dokunmatik ekrandan bırakılan bilgiler. Ekran adresi: <b>${escapeHtml(kioskLink())}</b></span>
+      <a class="btn" href="kiosk.html" target="_blank" rel="noopener" style="text-decoration:none; font-size:13px;">Ekranı aç ↗</a>
+    </div>
+    <div class="stats five">
+      <div class="stat"><span class="n">${ziyaretciler.length}</span><span class="l">Toplam</span></div>
+      <div class="stat"><span class="n">${ziyaretciler.filter(z=>localKey(z.created_at).startsWith(buAy)).length}</span><span class="l">Bu ay</span></div>
+      <div class="stat ${ziyaretciler.some(z=>z.durum==="Yeni")?"danger":""}"><span class="n">${ziyaretciler.filter(z=>z.durum==="Yeni").length}</span><span class="l">Yeni (dönülmedi)</span></div>
+      <div class="stat"><span class="n">${ziyaretciler.filter(z=>z.izin_eposta).length}</span><span class="l">E-posta izni</span></div>
+      <div class="stat"><span class="n">${ziyaretciler.filter(z=>z.izin_telefon).length}</span><span class="l">Telefon izni</span></div>
+    </div>
+    ${ilgiler.length?`<div class="rh-chips"><span class="chip ${!zyIlgi?"active":""}" onclick="zyIlgi=''; renderZiyaretci()">Tüm ilgiler</span>${ilgiler.map(i=>`<span class="chip ${zyIlgi===i?"active":""}" onclick="zyIlgi=${escapeHtml(JSON.stringify(i))}; renderZiyaretci()">${escapeHtml(i)} ${say[i]}</span>`).join("")}</div>`:""}
+    <div class="mg-filters">
+      <input placeholder="Ad, telefon, e-posta ara…" value="${escapeHtml(zySearch)}" oninput="zySearch=this.value; renderZiyaretciTable()">
+      <select onchange="zyIzin=this.value; renderZiyaretciTable()">${[["","Tüm izinler"],["eposta","E-posta izni olanlar"],["telefon","Telefon izni olanlar"]].map(([k,l])=>`<option value="${k}" ${k===zyIzin?"selected":""}>${l}</option>`).join("")}</select>
+      <select onchange="zyDurum=this.value; renderZiyaretciTable()"><option value="">Tüm durumlar</option>${ZY_DURUM.map(d=>`<option ${d===zyDurum?"selected":""}>${d}</option>`).join("")}</select>
+    </div>
+    <div class="mg-scroll" id="zyTable"></div>
+  </div>`;
+  renderZiyaretciTable();
+}
+function zyListe(){
+  const q=zySearch.toLocaleLowerCase("tr");
+  return ziyaretciler.filter(z=>(!zyIlgi||(z.ilgi||[]).includes(zyIlgi)) && (!zyDurum||z.durum===zyDurum)
+    && (!zyIzin||(zyIzin==="eposta"?z.izin_eposta:z.izin_telefon))
+    && (!q||[z.ad,z.telefon,z.email].filter(Boolean).join(" ").toLocaleLowerCase("tr").includes(q)));
+}
+function renderZiyaretciTable(){
+  const el=document.getElementById("zyTable"); if(!el) return;
+  const list=zyListe();
+  const pill=d=>{ const [bg,fg]=ZY_RENK[d]||ZY_RENK["Yeni"]; return `<span class="pill" style="background:${bg}; color:${fg};">${escapeHtml(d)}</span>`; };
+  const rows=list.length?list.map(z=>`<tr onclick="openZiyaretci('${z.id}')">
+      <td><b>${escapeHtml(z.ad)}</b><div class="st">${[z.telefon,z.email].filter(Boolean).map(escapeHtml).join(" · ")}</div></td>
+      <td class="st">${zyIzinler(z).join(", ")||"—"}</td>
+      <td class="hide-m">${(z.ilgi||[]).map(i=>`<span class="rh-tag">${escapeHtml(i)}</span>`).join("")}</td>
+      <td>${pill(z.durum)}</td>
+      <td class="st hide-m" style="white-space:nowrap;">${fmtFull(localKey(z.created_at))} ${fmtSaat(z.created_at)}</td>
+    </tr>`).join(""):`<tr><td colspan="5"><div class="list-empty">${ziyaretciler.length?"Filtreye uyan kayıt yok.":"Henüz kayıt yok. Dokunmatik ekrandan girilenler burada görünecek."}</div></td></tr>`;
+  el.innerHTML=`<table class="list"><thead><tr><th>Ad / iletişim</th><th>İzin</th><th class="hide-m">İlgi konuları</th><th>Durum</th><th class="hide-m">Tarih</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function openZiyaretci(id){
+  const z=ziyaretciler.find(x=>x.id===id); if(!z) return;
+  editingZyId=id;
+  const blok=(l,v)=>`<div class="field"><label>${escapeHtml(l)}</label><div style="font-size:14px; line-height:1.5; white-space:pre-wrap; word-break:break-word;">${v}</div></div>`;
+  document.getElementById("zyModalTitle").textContent=z.ad;
+  document.getElementById("zyDetail").innerHTML=`
+    <div style="margin-bottom:10px; font-size:13px; color:var(--text-2);">${fmtFull(localKey(z.created_at))} ${fmtSaat(z.created_at)} · dokunmatik ekran</div>
+    <div class="rh-actions">${kontakLinks({telefon:z.telefon,email:z.email},"")}</div>
+    ${z.telefon?blok("Telefon",escapeHtml(z.telefon)+(z.izin_telefon?"":` <span class="st">· arama/SMS izni yok</span>`)):""}
+    ${z.email?blok("E-posta",escapeHtml(z.email)+(z.izin_eposta?"":` <span class="st">· e-posta izni yok</span>`)):""}
+    ${(z.ilgi||[]).length?blok("İlgi konuları",z.ilgi.map(i=>`<span class="rh-tag">${escapeHtml(i)}</span>`).join("")):""}
+    ${z.izin_metni?blok("Onayladığı metin",`<span style="font-size:12px; color:var(--text-2);">${escapeHtml(z.izin_metni)}</span>`):""}
+    <div class="field"><label>Durum</label><select id="zyDurumSel">${ZY_DURUM.map(d=>`<option ${d===z.durum?"selected":""}>${d}</option>`).join("")}</select></div>
+    <div class="field"><label>Not</label><textarea id="zyNot" rows="3" placeholder="ör. Atölye takvimi gönderildi" style="resize:vertical; min-height:64px; line-height:1.5;">${escapeHtml(z.notlar||"")}</textarea></div>`;
+  document.getElementById("ziyaretciOverlay").classList.add("show");
+}
+function closeZiyaretci(){ document.getElementById("ziyaretciOverlay").classList.remove("show"); editingZyId=null; }
+async function saveZiyaretci(){
+  if(!editingZyId) return;
+  const { error } = await sb.from("magaza_ziyaretcileri").update({ durum:document.getElementById("zyDurumSel").value, notlar:document.getElementById("zyNot").value.trim()||null }).eq("id",editingZyId);
+  if(error){ alert("Kaydedilemedi: "+error.message); return; }
+  closeZiyaretci(); await loadZiyaretciler();
+}
+async function deleteZiyaretci(){
+  const z=ziyaretciler.find(x=>x.id===editingZyId); if(!z) return;
+  if(!confirm(`${z.ad} kaydı kalıcı olarak silinsin mi?`)) return;
+  const { error } = await sb.from("magaza_ziyaretcileri").delete().eq("id",z.id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  closeZiyaretci(); await loadZiyaretciler();
+}
+function ziyaretciCsv(){
+  const list=zyListe(); if(!list.length){ alert("Kayıt yok"); return; }
+  const g=v=>{ const s=String(v??""); return /^[=+\-@\t\r]/.test(s) && !/^\+?[\d\s()-]+$/.test(s) ? "'"+s : s; };
+  csvDownload("magaza-ziyaretciler.csv", [["Tarih","Saat","Ad soyad","Telefon","E-posta","E-posta izni","Telefon izni","İlgi konuları","Durum","Not","Onay metni"],
+    ...list.map(z=>[fmtFull(localKey(z.created_at)),fmtSaat(z.created_at),z.ad,z.telefon,z.email,z.izin_eposta?"Evet":"Hayır",z.izin_telefon?"Evet":"Hayır",(z.ilgi||[]).join(", "),z.durum,z.notlar,z.izin_metni].map(g))]);
 }
 
 /* mağaza — satış ekranı */
@@ -3273,6 +3384,7 @@ function csvDownload(name, rows){
 }
 function trNum(n){ return (Math.round((Number(n)||0)*100)/100).toString().replace(".",","); }
 function magazaCsv(){
+  if(magazaView==="ziyaretci") return ziyaretciCsv();
   const ayKey=magazaMonth.getFullYear()+"-"+String(magazaMonth.getMonth()+1).padStart(2,"0");
   if(magazaView==="urunler"){
     csvDownload("magaza-urunler.csv", [["Kod","Ürün","Marka","Kategori","Ölçü","Fiyat","Stok","Stok değeri"],
