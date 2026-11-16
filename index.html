@@ -204,6 +204,34 @@
   .linkchip:hover { background: var(--border); }
   .linkrow { display: flex; align-items: center; gap: 6px; }
   .linkrow .linkchip { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  /* etkinlik takvimi */
+  .et-cal { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+  .et-head { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); background: var(--surface-2); }
+  .et-head div { padding: 6px 0; text-align: center; font-size: 11px; color: var(--text-2); font-weight: 600; }
+  .et-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); }
+  .et-cell { min-height: 98px; min-width: 0; border-top: 1px solid var(--border); border-left: 1px solid var(--border); padding: 4px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+  .et-cell:nth-child(7n+1) { border-left: none; }
+  .et-cell:hover { background: var(--surface-2); }
+  .et-cell.out { background: var(--surface-2); }
+  .et-cell.out .et-num { color: var(--text-3); }
+  .et-num { font-size: 11px; color: var(--text-2); align-self: flex-start; min-width: 20px; height: 20px; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; }
+  .et-cell.today .et-num { background: var(--accent); color: #fff; font-weight: 600; }
+  .et-chip { font-size: 11px; line-height: 1.3; padding: 2px 5px; border-radius: 5px; border-left: 3px solid; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .et-chip.iptal { text-decoration: line-through; opacity: .55; }
+  .et-chip.cakisma { box-shadow: inset 0 0 0 1px #c0392b; }
+  .et-more { font-size: 11px; color: var(--text-3); padding-left: 4px; }
+  .et-row-time { font-size: 12px; color: var(--text-2); min-width: 86px; white-space: nowrap; }
+  .et-ekip { display: flex; flex-wrap: wrap; gap: 6px; }
+  .et-pick { display: inline-flex; align-items: center; font-size: 13px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border-2); cursor: pointer; user-select: none; }
+  .et-pick input { display: none; }
+  .et-pick:has(input:checked) { background: var(--accent); border-color: var(--accent); color: #fff; }
+  @media (max-width: 760px) {
+    .et-cell { min-height: 54px; padding: 2px; gap: 2px; }
+    .et-chip { font-size: 0; height: 5px; padding: 0; border-left: none; border-radius: 3px; }
+    .et-chip.cakisma { box-shadow: none; background: #c0392b !important; }
+    .et-more { font-size: 9px; padding-left: 1px; }
+    .et-row-time { min-width: 70px; }
+  }
   /* ana menü */
   .home { padding: 22px 22px 40px; max-width: 980px; margin: 0 auto; }
   .home-hi { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
@@ -244,6 +272,7 @@
   .mg-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
   .mg-filters input, .mg-filters select { border: 1px solid var(--border); background: var(--surface); padding: 8px 10px; border-radius: 8px; font-size: 14px; color: var(--text); font-family: inherit; }
   .mg-filters input { flex: 1; min-width: 160px; }
+  .mg-filters input[type=checkbox] { flex: none; min-width: 0; padding: 0; }
   .mg-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
   .mg-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; text-align: left; font-family: inherit; padding: 0; color: var(--text); box-shadow: var(--shadow); position: relative; }
   .mg-item:hover { border-color: var(--border-2); }
@@ -471,6 +500,24 @@
   <button class="btn" onclick="katilimCsv()">⬇ CSV</button>
   <button class="btn" onclick="katilimLinkKopyala(this)">🔗 Linki kopyala</button>
   <a class="btn" href="katil.html" target="_blank" rel="noopener" style="text-decoration:none;">Formu aç ↗</a>
+</div>
+
+<div class="toolbar" id="etkinlikToolbar" style="display:none;">
+  <button class="btn" onclick="toggleSection('menu')">← Menü</button>
+  <span style="font-weight:600; font-size:15px;">📅 Etkinlik Takvimi</span>
+  <div class="viewtoggle" style="margin-left:6px;">
+    <button class="vt active" id="evAy" onclick="setEtkinlikView('ay')">Ay</button>
+    <button class="vt" id="evListe" onclick="setEtkinlikView('liste')">Liste</button>
+  </div>
+  <div class="spacer"></div>
+  <span id="etkinlikMonthNav" style="display:inline-flex; align-items:center; gap:8px;">
+    <button class="btn" onclick="etkinlikAyGit(-1)" title="Önceki ay">‹</button>
+    <span id="etkinlikAyLabel" style="font-weight:500; min-width:110px; text-align:center;"></span>
+    <button class="btn" onclick="etkinlikAyGit(1)" title="Sonraki ay">›</button>
+    <button class="btn" onclick="etkinlikAyGit(0)">Bugün</button>
+  </span>
+  <button class="btn" onclick="etkinlikCsv()">⬇ CSV</button>
+  <button class="btn btn-primary" onclick="openEtkinlik()">+ Etkinlik</button>
 </div>
 
 <div id="board"></div>
@@ -883,6 +930,45 @@
   </div>
 </div>
 
+<!-- Etkinlik modal -->
+<div class="overlay" id="etkinlikOverlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="etkinlikModalTitle">Yeni etkinlik</h2><button class="icon-btn" onclick="closeEtkinlik()">&times;</button></div>
+    <div class="modal-body">
+      <div id="et_bag"></div>
+      <div class="field"><label>Etkinlik adı</label><input id="et_baslik" maxlength="160" placeholder="ör. Seramik atölyesi, Cuma akşamı konser"></div>
+      <div class="row2">
+        <div class="field"><label>Tür</label><select id="et_tur"></select></div>
+        <div class="field"><label>Durum</label><select id="et_durum" onchange="etUyari()"></select></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Tarih</label><input id="et_tarih" type="date" oninput="etUyari()"></div>
+        <div class="field"><label>Bitiş tarihi (çok günlüyse)</label><input id="et_bitis" type="date" oninput="etUyari()"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Başlangıç saati</label><input id="et_saat1" type="time" oninput="etUyari()"></div>
+        <div class="field"><label>Bitiş saati</label><input id="et_saat2" type="time" oninput="etUyari()"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Alan / mekân</label><input id="et_alan" list="etAlanList" maxlength="80" placeholder="ör. Ana salon, Bahçe" oninput="etUyari()"><datalist id="etAlanList"></datalist></div>
+        <div class="field"><label>Kişi sayısı</label><input id="et_kisi" inputmode="numeric" placeholder="ör. 40"></div>
+      </div>
+      <div class="mg-warn" id="et_uyari" style="display:none;"></div>
+      <div class="field"><label>Ana sorumlu</label><select id="et_sorumlu"></select></div>
+      <div class="field"><label>Görevli ekip</label><div class="et-ekip" id="et_ekip"></div></div>
+      <div class="row2">
+        <div class="field"><label>Talep eden</label><input id="et_talep" maxlength="120" placeholder="Kişi / kurum"></div>
+        <div class="field"><label>İletişim</label><input id="et_iletisim" maxlength="120" placeholder="Telefon veya e-posta"></div>
+      </div>
+      <div class="field"><label>Notlar (kurulum, teknik ihtiyaç, ücret…)</label><textarea id="et_not" rows="3" style="resize:vertical; min-height:64px; line-height:1.5;"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="link-danger" id="etkinlikDeleteBtn" onclick="deleteEtkinlik()">Sil</button>
+      <div style="display:flex; gap:8px;"><button class="btn" onclick="closeEtkinlik()">Vazgeç</button><button class="btn btn-primary" onclick="saveEtkinlik()">Kaydet</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- Bildirimler (inbox) modal -->
 <div class="overlay" id="inboxOverlay">
   <div class="modal" style="max-width: 440px;">
@@ -1033,7 +1119,7 @@ async function boot() {
   hasMagaza = isAdmin || hasFinance || !!(peopleRows.find(p=>p.user_id===me.id)?.magaza);
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadZiyaretciler(), loadKayitlar(), loadKatilim(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadZiyaretciler(), loadKayitlar(), loadKatilim(), loadEtkinlikler(), loadTasks()]);
   toggleSection(SECTIONS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "menu", true);
   subscribe();
   initPush();
@@ -1194,6 +1280,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"kisiler" }, loadPeople)
     .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, async()=>{ await loadContacts(); refreshRehber(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"kontak_kayitlari" }, async()=>{ await loadKayitlar(); refreshRehber(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"etkinlikler" }, async()=>{ await loadEtkinlikler(); refreshEtkinlik(); refreshMenu(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"katilim_basvurulari" }, async()=>{ await loadKatilim(); refreshKatilim(); refreshMenu(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
@@ -1849,7 +1936,7 @@ async function loadProducerFiles(){
   producerFiles = data || [];
 }
 function producerFileCount(id){ return producerFiles.filter(f=>f.uretici_id===id).length; }
-const SECTIONS=["menu","isler","magaza","finans","rehber","basvurular","dijitalart","ureticiler"];   // "ureticiler" → Mağaza içindeki sekme
+const SECTIONS=["menu","isler","magaza","finans","rehber","etkinlik","basvurular","dijitalart","ureticiler"];   // "ureticiler" → Mağaza içindeki sekme
 function toggleSection(s, fromHistory){
   if(s==="ureticiler"){ magazaView="ureticiler"; s="magaza"; }
   if(s==="finans" && !hasFinance) s="menu";
@@ -1862,7 +1949,7 @@ function toggleSection(s, fromHistory){
     if(s==="menu") history.pushState(null,"",location.pathname+location.search);
     else history.pushState(null,"","#"+s);
   }
-  [["taskToolbar","isler"],["prodToolbar","ureticiler"],["finansToolbar","finans"],["eserToolbar","dijitalart"],["magazaToolbar","magaza"],["rehberToolbar","rehber"],["basvuruToolbar","basvurular"]]
+  [["taskToolbar","isler"],["prodToolbar","ureticiler"],["finansToolbar","finans"],["eserToolbar","dijitalart"],["magazaToolbar","magaza"],["rehberToolbar","rehber"],["basvuruToolbar","basvurular"],["etkinlikToolbar","etkinlik"]]
     .forEach(([id,k])=>document.getElementById(id).style.display = s===k ? "flex" : "none");
   toggleCart(false);
   window.scrollTo(0,0);
@@ -1872,6 +1959,7 @@ function toggleSection(s, fromHistory){
   else if(s==="magaza"){ updateMagazaLabel(); setMagazaView(magazaView); }
   else if(s==="rehber"){ setRehberView(rehberView); }
   else if(s==="basvurular"){ renderKatilim(); }
+  else if(s==="etkinlik"){ setEtkinlikView(etkinlikView); }
   else { render(); }
 }
 window.addEventListener("popstate", ()=>{ if(!me) return; const h=location.hash.slice(1); toggleSection(SECTIONS.includes(h)?h:"menu", true); });
@@ -1897,11 +1985,17 @@ function renderMenu(){
       ${badge?`<span class="tb">${badge}</span>`:""}
       <div class="ico" style="background:${bg};">${ico}</div><div class="tt">${title}</div><div class="ts">${sub}</div></button>`;
   const yeniKatilim=katilimlar.filter(b=>b.durum==="Yeni").length;
+  const haftaSon=new Date(today); haftaSon.setDate(haftaSon.getDate()+7); const haftaK=localKey(haftaSon.toISOString());
+  const etAktif=etkinlikler.filter(e=>e.durum!=="İptal");
+  const etHafta=etAktif.filter(e=>e.tarih<=haftaK && etBitis(e)>=todayK).length;
+  const etBugun=etAktif.filter(e=>e.tarih<=todayK && etBitis(e)>=todayK).length;
+  const etTalep=etAktif.filter(e=>e.durum==="Talep" && etBitis(e)>=todayK).length;
   const tiles=[
     tile("isler","📋","#EEEDFE","İşler", `${mine.length} açık görevin${acil?` · <b style="color:#c0392b">${acil} acil</b>`:""}`, gecTask?`${gecTask} gecikmiş`:""),
     hasMagaza?tile("magaza","🛍️","#E1F5EE","Mağaza", `Bugün ${bugun.length} satış · ${fmtMoney(bugun.reduce((s,x)=>s+Number(x.toplam||0),0))}<br>${producers.length} üretici · ${urunler.length} ürün`, ""):"",
     hasFinance?tile("finans","🏦","#E6F1FB","Finans", `Bekleyen ödeme: ${fmtMoney(bekOd.reduce((s,o)=>s+Number(o.tutar||0),0))}`, gecOd?`${gecOd} gecikmiş`:""):"",
     tile("rehber","📇","#FAEEDA","Rehber", `${contacts.length} kişi / firma · influencer, partner…`, takip?`${takip} takip`:""),
+    tile("etkinlik","📅","#E6F1FB","Etkinlik Takvimi", `7 gün içinde ${etHafta} etkinlik${etTalep?` · ${etTalep} talep bekliyor`:""}`, etBugun?`Bugün ${etBugun}`:""),
     isAdmin?tile("basvurular","📨","#F0E6FB","Başvurular", `${katilimlar.length} başvuru · tasarımcı, atölye, etkinlik`, yeniKatilim?`${yeniKatilim} yeni`:""):"",
     tile("dijitalart","🎨","#FBEAF0","Dijital Art", `${eserler.length} eser${yeniBas?` · ${yeniBas} yeni başvuru`:""}`, ""),
     tile("ekip","👥","#EAF3DE","Ekip", `${peopleRows.length} kişi`, "", "openPeople()"),
@@ -2681,6 +2775,7 @@ function openKatilim(id){
     ${b.telefon?blok("Telefon",b.telefon):""}${blok("E-posta",b.email)}
     ${(b.alanlar||[]).map(a=>blok(a.etiket,a.deger)).join("")}
     ${dosyalar.length?`<div class="field"><label>Dosyalar</label>${dosyalar.map(f=>`<div><a href="${escapeHtml(f.url)}" target="_blank" rel="noopener" style="font-size:14px; color:var(--accent);">📎 ${escapeHtml(f.ad)}</a></div>`).join("")}</div>`:""}
+    <div class="field" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><button class="btn" onclick="katilimTakvime()">📅 Takvime ekle</button>${etkinlikler.filter(e=>e.katilim_id===b.id).map(e=>`<span class="linkchip" onclick="closeKatilim(); toggleSection('etkinlik'); openEtkinlikEdit('${e.id}')">${fmtFull(e.tarih)} · ${escapeHtml(e.durum)}</span>`).join("")}</div>
     <div class="field"><label>Durum</label><select id="katilimDurumSel">${KATILIM_DURUM.map(d=>`<option ${d===b.durum?"selected":""}>${d}</option>`).join("")}</select></div>
     <div class="field"><label>Ekip notu</label><textarea id="katilimNot" rows="3" style="resize:vertical; min-height:64px; line-height:1.5;">${escapeHtml(b.not_admin||"")}</textarea></div>`;
   document.getElementById("basvuruOverlay").classList.add("show");
@@ -2700,6 +2795,221 @@ async function deleteKatilim(){
   const { error } = await sb.from("katilim_basvurulari").delete().eq("id",b.id);
   if(error){ alert("Silinemedi: "+error.message); return; }
   closeKatilim(); await loadKatilim(); refreshKatilim();
+}
+/* etkinlik takvimi (ekip içi koordinasyon) */
+const ETK_TUR = ["Atölye","Konser","Performans","Sergi","Gösterim","Söyleşi","Topluluk buluşması","Immersive","Wellness","Nocturne","Kurumsal / kiralama","Diğer"];
+const ETK_DURUM = ["Talep","Opsiyon","Onaylandı","Tamamlandı","İptal"];
+const ETK_RENK = { "Talep":["#FAEEDA","#854F0B"], "Opsiyon":["#E6F1FB","#185FA5"], "Onaylandı":["#E1F5EE","#0F6E56"], "Tamamlandı":["#f1efe8","#6b6a62"], "İptal":["#fceeee","#c0392b"] };
+const ETK_AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+let etkinlikler = [], etkinlikHata = "";
+let etkinlikView = "ay", etkinlikAy = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let etTur = "", etDurum = "", etBenim = false, etGecmis = false;
+let editingEtkinlikId = null, etBagKatilim = null;
+async function loadEtkinlikler(){
+  try{ etkinlikler = await fetchAll("etkinlikler","tarih",true); etkinlikHata=""; }
+  catch(e){ console.error("etkinlikler:", e.message); etkinlikler=[]; etkinlikHata=e.message; }
+}
+function refreshEtkinlik(){ if(section==="etkinlik") renderEtkinlik(); }
+function etDk(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function etTarih(k){ return new Date(k+"T00:00:00"); }
+function etBitis(e){ return e.bitis_tarih && e.bitis_tarih>e.tarih ? e.bitis_tarih : e.tarih; }
+function etSaat(t){ return t ? String(t).slice(0,5) : ""; }
+function etSaatYazi(e){ const a=etSaat(e.baslangic_saat), b=etSaat(e.bitis_saat); return a ? (b ? a+"–"+b : a) : "Tüm gün"; }
+function etPill(d){ const [bg,fg]=ETK_RENK[d]||ETK_RENK["Talep"]; return `<span class="pill" style="background:${bg}; color:${fg};">${escapeHtml(d)}</span>`; }
+function etBenimMi(e){ return !!myName && (e.sorumlu===myName || (e.ekip||[]).includes(myName)); }
+function etFiltre(list){ return list.filter(e=>(!etTur||e.tur===etTur)&&(!etDurum||e.durum===etDurum)&&(!etBenim||etBenimMi(e))); }
+// aynı alanda, tarih ve saati çakışan (iptal olmayan) etkinlikler
+function etCakisiyor(a,b){
+  if(a.id===b.id || a.durum==="İptal" || b.durum==="İptal") return false;
+  const al=String(a.alan||"").trim().toLocaleLowerCase("tr"), bl=String(b.alan||"").trim().toLocaleLowerCase("tr");
+  if(!al || al!==bl) return false;
+  if(a.tarih>etBitis(b) || b.tarih>etBitis(a)) return false;
+  const as=etSaat(a.baslangic_saat), bs=etSaat(b.baslangic_saat);
+  if(!as || !bs) return true;
+  const ae=etSaat(a.bitis_saat)||"24:00", be=etSaat(b.bitis_saat)||"24:00";
+  return as<be && bs<ae;
+}
+function etCakismaSeti(list){
+  const s=new Set();
+  for(let i=0;i<list.length;i++) for(let j=i+1;j<list.length;j++) if(etCakisiyor(list[i],list[j])){ s.add(list[i].id); s.add(list[j].id); }
+  return s;
+}
+function setEtkinlikView(v){
+  etkinlikView=v;
+  document.getElementById("evAy").classList.toggle("active", v==="ay");
+  document.getElementById("evListe").classList.toggle("active", v==="liste");
+  document.getElementById("etkinlikMonthNav").style.display = v==="ay" ? "inline-flex" : "none";
+  renderEtkinlik();
+}
+function etkinlikAyGit(n){
+  etkinlikAy = n ? new Date(etkinlikAy.getFullYear(), etkinlikAy.getMonth()+n, 1) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  renderEtkinlik();
+}
+function etFiltreHtml(){
+  return `<div class="mg-filters" style="align-items:center;">
+    <select onchange="etTur=this.value; renderEtkinlik()"><option value="">Tüm türler</option>${ETK_TUR.map(t=>`<option ${t===etTur?"selected":""}>${escapeHtml(t)}</option>`).join("")}</select>
+    <select onchange="etDurum=this.value; renderEtkinlik()"><option value="">Tüm durumlar</option>${ETK_DURUM.map(t=>`<option ${t===etDurum?"selected":""}>${t}</option>`).join("")}</select>
+    <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" ${etBenim?"checked":""} onchange="etBenim=this.checked; renderEtkinlik()"> Sadece benim görevli olduklarım</label>
+    ${etkinlikView==="liste"?`<label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="checkbox" ${etGecmis?"checked":""} onchange="etGecmis=this.checked; renderEtkinlik()"> Geçmişi de göster</label>`:""}
+  </div>`;
+}
+function etRow(e, cak){
+  const alt=[e.tur, e.alan, e.sorumlu?"👤 "+e.sorumlu:"", e.kisi_sayisi?e.kisi_sayisi+" kişi":""].filter(Boolean).map(escapeHtml).join(" · ");
+  const cokGun=etBitis(e)!==e.tarih ? ` · ${fmtFull(e.tarih)} → ${fmtFull(etBitis(e))}` : "";
+  return `<div class="cal-row" onclick="openEtkinlikEdit('${e.id}')">
+    <span class="et-row-time">${etSaatYazi(e)}</span>
+    <div style="flex:1; min-width:0;">
+      <div class="cal-title${e.durum==="İptal"?" done":""}">${escapeHtml(e.baslik)}${cak.has(e.id)?` <span style="color:#c0392b; font-size:12px; font-weight:600;">⚠ çakışma</span>`:""}</div>
+      <div class="cal-sub">${alt}${cokGun}</div>
+    </div>
+    ${etPill(e.durum)}
+  </div>`;
+}
+// iptaller sona, sonra saate göre
+function etSirala(a,b){ return (a.durum==="İptal")-(b.durum==="İptal") || (etSaat(a.baslangic_saat)||"00").localeCompare(etSaat(b.baslangic_saat)||"00"); }
+function etGunGrup(list, cak, bos){
+  const byDay={};
+  list.forEach(e=>{ (byDay[e.tarih]=byDay[e.tarih]||[]).push(e); });
+  const bugun=todayStr();
+  const gunAd=k=>["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"][etTarih(k).getDay()];
+  return Object.keys(byDay).sort().map(k=>`<div class="cal-group">${k===bugun?"Bugün · ":""}${fmtFull(k)} ${gunAd(k)} <span>${byDay[k].length}</span></div>`+
+    byDay[k].sort(etSirala).map(e=>etRow(e,cak)).join("")).join("") || `<div class="list-empty">${bos}</div>`;
+}
+function renderEtkinlik(){
+  const board=document.getElementById("board"); board.className="";
+  document.getElementById("etkinlikAyLabel").textContent=ETK_AYLAR[etkinlikAy.getMonth()]+" "+etkinlikAy.getFullYear();
+  const hata=etkinlikHata?`<div class="mg-warn">Etkinlikler yüklenemedi. Supabase SQL Editor'de <b>update-etkinlik.sql</b> dosyasını çalıştırın.</div>`:"";
+  const tum=etFiltre(etkinlikler);
+  const cak=etCakismaSeti(etkinlikler);
+  if(etkinlikView==="liste"){
+    const bugun=todayStr();
+    const list=tum.filter(e=>etGecmis || etBitis(e)>=bugun);
+    board.innerHTML=`<div class="listwrap">${hata}${etFiltreHtml()}${etGunGrup(list,cak, etkinlikler.length?"Filtreye uyan etkinlik yok.":"Henüz etkinlik yok. “+ Etkinlik” ile ekleyin.")}</div>`;
+    return;
+  }
+  const y=etkinlikAy.getFullYear(), mo=etkinlikAy.getMonth();
+  const ayBas=etDk(new Date(y,mo,1)), aySon=etDk(new Date(y,mo+1,0));
+  const ayda=tum.filter(e=>e.tarih<=aySon && etBitis(e)>=ayBas);
+  const aktif=ayda.filter(e=>e.durum!=="İptal");
+  const bekleyen=aktif.filter(e=>e.durum==="Talep"||e.durum==="Opsiyon").length;
+  const cakSay=aktif.filter(e=>cak.has(e.id)).length;
+  // ızgara: ayın ilk gününü içeren pazartesiden son gününü içeren pazara
+  const bas=new Date(y,mo,1); bas.setDate(bas.getDate()-((bas.getDay()+6)%7));
+  const son=new Date(y,mo+1,0); son.setDate(son.getDate()+(7-((son.getDay()+6)%7)-1));
+  const gunluk={};
+  tum.forEach(e=>{ const d=etTarih(e.tarih), b=etTarih(etBitis(e)); let i=0; for(; d<=b && i<62; d.setDate(d.getDate()+1), i++) (gunluk[etDk(d)]=gunluk[etDk(d)]||[]).push(e); });
+  const bugun=todayStr();
+  let cells="";
+  for(const d=new Date(bas); d<=son; d.setDate(d.getDate()+1)){
+    const k=etDk(d), list=(gunluk[k]||[]).sort(etSirala);
+    const chips=list.slice(0,3).map(e=>{ const [bg,fg]=ETK_RENK[e.durum]||ETK_RENK["Talep"];
+      return `<div class="et-chip${e.durum==="İptal"?" iptal":""}${cak.has(e.id)?" cakisma":""}" style="background:${bg}; color:${fg}; border-color:${fg};" title="${escapeHtml(etSaatYazi(e)+" · "+e.baslik+(e.alan?" · "+e.alan:""))}" onclick="event.stopPropagation(); openEtkinlikEdit('${e.id}')">${etSaat(e.baslangic_saat)?etSaat(e.baslangic_saat)+" ":""}${escapeHtml(e.baslik)}</div>`; }).join("");
+    cells+=`<div class="et-cell${d.getMonth()!==mo?" out":""}${k===bugun?" today":""}" onclick="openEtkinlik({tarih:'${k}'})"><span class="et-num">${d.getDate()}</span>${chips}${list.length>3?`<span class="et-more">+${list.length-3} daha</span>`:""}</div>`;
+  }
+  board.innerHTML=`<div class="listwrap">${hata}
+    <div class="stats">
+      <div class="stat"><span class="n">${aktif.length}</span><span class="l">Bu ay etkinlik</span></div>
+      <div class="stat"><span class="n">${aktif.filter(e=>e.durum==="Onaylandı"||e.durum==="Tamamlandı").length}</span><span class="l">Onaylı</span></div>
+      <div class="stat"><span class="n">${bekleyen}</span><span class="l">Talep / opsiyon</span></div>
+      <div class="stat ${cakSay?"danger":""}"><span class="n">${cakSay}</span><span class="l">Alan çakışması</span></div>
+    </div>
+    ${etFiltreHtml()}
+    <div class="et-cal"><div class="et-head">${["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"].map(w=>`<div>${w}</div>`).join("")}</div><div class="et-grid">${cells}</div></div>
+    <div style="font-size:12px; color:var(--text-3); margin:8px 2px 0;">Bir güne dokunarak o güne etkinlik ekleyebilirsiniz.</div>
+    <div style="margin-top:14px;">${etGunGrup(ayda.filter(e=>e.tarih>=ayBas),cak,"Bu ay etkinlik yok.")}</div>
+  </div>`;
+}
+function fillEtkinlikForm(e){
+  document.getElementById("et_tur").innerHTML=ETK_TUR.map(t=>`<option>${escapeHtml(t)}</option>`).join("");
+  document.getElementById("et_durum").innerHTML=ETK_DURUM.map(t=>`<option>${t}</option>`).join("");
+  const names=peopleNames();
+  if(e.sorumlu && !names.includes(e.sorumlu)) names.push(e.sorumlu);
+  document.getElementById("et_sorumlu").innerHTML=`<option value="">— yok —</option>`+names.map(n=>`<option>${escapeHtml(n)}</option>`).join("");
+  const ekipAd=[...new Set([...peopleNames(), ...(e.ekip||[])])];
+  document.getElementById("et_ekip").innerHTML=ekipAd.map(n=>`<label class="et-pick"><input type="checkbox" value="${escapeHtml(n)}" ${(e.ekip||[]).includes(n)?"checked":""}>${escapeHtml(n)}</label>`).join("") || `<span style="font-size:13px; color:var(--text-3);">Ekip listesi boş</span>`;
+  const alanlar=[...new Set(etkinlikler.map(x=>String(x.alan||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"tr"));
+  document.getElementById("etAlanList").innerHTML=alanlar.map(a=>`<option value="${escapeHtml(a)}">`).join("");
+  setV("et_baslik",e.baslik); setV("et_tarih",e.tarih); setV("et_bitis",e.bitis_tarih&&e.bitis_tarih!==e.tarih?e.bitis_tarih:"");
+  setV("et_saat1",etSaat(e.baslangic_saat)); setV("et_saat2",etSaat(e.bitis_saat)); setV("et_alan",e.alan);
+  setV("et_kisi",e.kisi_sayisi!=null?String(e.kisi_sayisi):""); setV("et_talep",e.talep_eden); setV("et_iletisim",e.talep_iletisim); setV("et_not",e.notlar);
+  document.getElementById("et_tur").value=ETK_TUR.includes(e.tur)?e.tur:"Diğer";
+  document.getElementById("et_durum").value=ETK_DURUM.includes(e.durum)?e.durum:"Talep";
+  document.getElementById("et_sorumlu").value=e.sorumlu||"";
+  const kb=e.katilim_id && isAdmin && katilimlar.find(b=>b.id===e.katilim_id);
+  document.getElementById("et_bag").innerHTML=kb?`<div class="mg-today" style="display:flex; justify-content:space-between; align-items:center; gap:8px;"><span>📨 Başvurudan: <b>${escapeHtml(kb.ad)}</b></span><button class="btn" style="padding:4px 10px; font-size:12px;" onclick="etBasvuruAc('${kb.id}')">Başvuruyu aç</button></div>`:"";
+  etUyari();
+}
+function openEtkinlik(on){
+  on=on||{};
+  editingEtkinlikId=null; etBagKatilim=on.katilim_id||null;
+  document.getElementById("etkinlikModalTitle").textContent="Yeni etkinlik";
+  document.getElementById("etkinlikDeleteBtn").style.display="none";
+  fillEtkinlikForm(Object.assign({ tarih:todayStr(), durum:"Talep", tur:"Diğer", sorumlu:myName&&peopleNames().includes(myName)?myName:"", ekip:[] }, on));
+  document.getElementById("etkinlikOverlay").classList.add("show");
+  setTimeout(()=>document.getElementById("et_baslik").focus(),50);
+}
+function openEtkinlikEdit(id){
+  const e=etkinlikler.find(x=>x.id===id); if(!e) return;
+  editingEtkinlikId=id; etBagKatilim=e.katilim_id||null;
+  document.getElementById("etkinlikModalTitle").textContent=e.baslik;
+  document.getElementById("etkinlikDeleteBtn").style.display="inline";
+  fillEtkinlikForm(e);
+  document.getElementById("etkinlikOverlay").classList.add("show");
+}
+function closeEtkinlik(){ document.getElementById("etkinlikOverlay").classList.remove("show"); editingEtkinlikId=null; etBagKatilim=null; }
+function etFormVeri(){
+  const g=id=>document.getElementById(id).value.trim();
+  const kisi=parseInt(g("et_kisi"),10);
+  return { baslik:g("et_baslik"), tur:g("et_tur"), durum:g("et_durum"), tarih:g("et_tarih"), bitis_tarih:g("et_bitis")||null,
+    baslangic_saat:g("et_saat1")||null, bitis_saat:g("et_saat2")||null, alan:g("et_alan")||null,
+    kisi_sayisi:Number.isFinite(kisi)&&kisi>0?kisi:null, sorumlu:g("et_sorumlu")||null,
+    ekip:[...document.querySelectorAll("#et_ekip input:checked")].map(x=>x.value),
+    talep_eden:g("et_talep")||null, talep_iletisim:g("et_iletisim")||null, notlar:g("et_not")||null, katilim_id:etBagKatilim };
+}
+function etUyari(){
+  const el=document.getElementById("et_uyari"); const v=etFormVeri();
+  const list=v.tarih?etkinlikler.filter(x=>etCakisiyor(Object.assign({id:editingEtkinlikId||"_yeni"},v),x)):[];
+  el.style.display=list.length?"block":"none";
+  el.innerHTML=list.length?`⚠ <b>${escapeHtml(v.alan)}</b> bu saatte dolu: `+list.map(x=>`${escapeHtml(x.baslik)} (${fmtFull(x.tarih)} ${etSaatYazi(x)}, ${escapeHtml(x.durum)})`).join("; "):"";
+}
+async function saveEtkinlik(){
+  const v=etFormVeri();
+  if(!v.baslik){ alert("Etkinlik adı gerekli"); return; }
+  if(!v.tarih){ alert("Tarih gerekli"); return; }
+  if(v.bitis_tarih && v.bitis_tarih<v.tarih){ alert("Bitiş tarihi başlangıçtan önce olamaz"); return; }
+  if(v.bitis_tarih===v.tarih) v.bitis_tarih=null;
+  if(v.baslangic_saat && v.bitis_saat && !v.bitis_tarih && v.bitis_saat<=v.baslangic_saat){ alert("Bitiş saati başlangıçtan sonra olmalı"); return; }
+  const q = editingEtkinlikId ? sb.from("etkinlikler").update(v).eq("id",editingEtkinlikId) : sb.from("etkinlikler").insert(v);
+  const { error } = await q;
+  if(error){ alert("Kaydedilemedi: "+error.message); return; }
+  closeEtkinlik(); await loadEtkinlikler(); refreshEtkinlik(); refreshMenu();
+}
+async function deleteEtkinlik(){
+  const e=etkinlikler.find(x=>x.id===editingEtkinlikId); if(!e) return;
+  if(!confirm(`“${e.baslik}” takvimden kalıcı olarak silinsin mi?\nSadece iptal ettiyseniz durumu “İptal” yapmanız yeterli.`)) return;
+  const { error } = await sb.from("etkinlikler").delete().eq("id",e.id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  closeEtkinlik(); await loadEtkinlikler(); refreshEtkinlik(); refreshMenu();
+}
+function etBasvuruAc(id){ closeEtkinlik(); openKatilim(id); }
+// Başvurular → "Takvime ekle": başvurudaki bilgilerle yeni etkinlik taslağı
+function katilimTakvime(){
+  const b=katilimlar.find(x=>x.id===editingKatilimId); if(!b) return;
+  const al=b.alanlar||[];
+  const bul=re=>{ const a=al.find(x=>re.test(x.etiket||"")); return a?String(a.deger||"").trim():""; };
+  const baslik=bul(/(adı|başlığı)/i)||b.ad;
+  const tip=bul(/türü/i);
+  const tur=b.tur==="Atölye"?"Atölye":(ETK_TUR.includes(tip)?tip:"Diğer");
+  const kisi=parseInt(bul(/katılımcı|kontenjan|kişi/i),10);
+  const notlar=[bul(/tarih/i)?"Tarih önerisi: "+bul(/tarih/i):"", bul(/teknik|mekân düzeni/i)?"İhtiyaçlar: "+bul(/teknik|mekân düzeni/i):"", bul(/bilet/i)?"Bilet: "+bul(/bilet/i):""].filter(Boolean).join("\n");
+  closeKatilim();
+  toggleSection("etkinlik");
+  openEtkinlik({ baslik:baslik.slice(0,160), tur, talep_eden:b.ad, talep_iletisim:b.telefon||b.email||"", kisi_sayisi:Number.isFinite(kisi)&&kisi>0?kisi:null, notlar, katilim_id:b.id });
+}
+function etkinlikCsv(){
+  if(!etkinlikler.length){ alert("Etkinlik yok"); return; }
+  const rows=etFiltre(etkinlikler).map(e=>[fmtFull(e.tarih),e.bitis_tarih?fmtFull(e.bitis_tarih):"",etSaatYazi(e),e.baslik,e.tur,e.durum,e.alan,e.sorumlu,(e.ekip||[]).join(", "),e.talep_eden,e.talep_iletisim,e.kisi_sayisi,e.notlar].map(csvGuvenli));
+  csvDownload("etkinlik-takvimi.csv",[["Tarih","Bitiş","Saat","Etkinlik","Tür","Durum","Alan","Sorumlu","Ekip","Talep eden","İletişim","Kişi","Not"],...rows]);
 }
 // Excel, dış formdan gelen "=..." gibi değerleri formül olarak çalıştırmasın
 function csvGuvenli(v){ const s=String(v??""); return /^[=+\-@\t\r]/.test(s) && !/^\+?[\d\s()-]+$/.test(s) ? "'"+s : s; }
