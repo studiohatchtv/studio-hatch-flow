@@ -124,7 +124,7 @@ const IZIN_METIN = {
   eposta: "E-posta yoluyla",
   telefon: "telefon (arama ve SMS) yoluyla",
 };
-const BOS_SURE = 90, TESEKKUR_SURE = 7;   // saniye
+const BOS_SURE = 300, TESEKKUR_SURE = 7;   // saniye (300 = 5 dk)
 
 const PH = { ad:"Adın ve soyadın", telefon:"05xx xxx xx xx", email:"ornek@mail.com" };
 const SIRA = ["ad","telefon","email"];
@@ -144,7 +144,7 @@ function dokunuldu(){
   clearTimeout(bosTimer);
   if(document.getElementById("form").classList.contains("on")) bosTimer=setTimeout(sifirla, BOS_SURE*1000);
 }
-document.addEventListener("pointerdown", dokunuldu, true);
+["pointerdown","touchstart","keydown"].forEach(t=>document.addEventListener(t, dokunuldu, {capture:true, passive:true}));
 document.addEventListener("contextmenu", e=>e.preventDefault());
 
 function telGoster(t){ const d=t.replace(/\D/g,""); return [d.slice(0,4),d.slice(4,7),d.slice(7,9),d.slice(9,11)].filter(Boolean).join(" "); }
