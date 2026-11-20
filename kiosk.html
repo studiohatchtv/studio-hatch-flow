@@ -61,6 +61,15 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 #form header button{color:#fff;font-size:calc(var(--u)*2.2);padding:calc(var(--u)*1.2) calc(var(--u)*2.4);border:1px solid rgba(255,255,255,.4)}
 .body{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:4vw;padding:calc(var(--u)*3.5) 4vw calc(var(--u)*2);overflow:hidden}
 h2{font-size:calc(var(--u)*4.4);letter-spacing:-.04em;margin-bottom:calc(var(--u)*2.4)}
+/* klavye açıkken: başlıkları gizle, yazılan kutu görünür kalsın diye kaydır */
+#form.kbon h2{display:none}
+#form.kbon .body{overflow-y:auto;scrollbar-width:none;padding-top:calc(var(--u)*2.5)}
+#form.kbon .body::-webkit-scrollbar{display:none}
+/* e-posta klavyesi: kısayollar solda, Tamam sağda → 4 sıra */
+.kgrid{display:flex;justify-content:center;gap:calc(var(--u)*1.6)}
+.kcol{display:flex;flex-direction:column;gap:calc(var(--u)*.9);padding-bottom:calc(var(--u)*.9)}
+.kcol .k{width:calc(var(--u)*19)}
+.kcol .k.go{flex:1;height:auto}
 .lbl{font-size:calc(var(--u)*2);font-weight:700;margin-bottom:calc(var(--u)*1);display:flex;justify-content:space-between}
 .lbl small{font-weight:400;color:var(--muted)}
 .inp{display:block;width:100%;text-align:left;background:#fff;border:2px solid var(--line);min-height:calc(var(--u)*7.5);padding:0 calc(var(--u)*2);font-size:calc(var(--u)*3.2);margin-bottom:calc(var(--u)*2.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:calc(var(--u)*7.5)}
@@ -247,7 +256,7 @@ function buyuk(c){ return c==="i"?"İ":c==="ı"?"I":c.toLocaleUpperCase("tr"); }
 function tus(lbl, cls, data){ return `<button class="k ${cls||""}" data-k="${esc(data??lbl)}">${esc(lbl)}</button>`; }
 function klavyeCiz(){
   const kb=document.getElementById("kb");
-  if(!aktif){ kb.classList.remove("on"); kb.innerHTML=""; return; }
+  if(!aktif){ kb.classList.remove("on","mail"); kb.innerHTML=""; aktifGoster(); return; }
   kb.classList.add("on");
   const son = aktif==="email" ? "Tamam ✓" : "Sonraki →";
   let h="";
@@ -255,13 +264,27 @@ function klavyeCiz(){
     h=NUM.map(r=>`<div class="kr">${r.map(c=>tus(c, "num"+(c==="⌫"?" dk":""))).join("")}</div>`).join("")
       .replace(/<\/div>$/, tus(son,"go w3","__ok")+"</div>");
   } else if(aktif==="email"){
-    h=HARF_EN.map(r=>`<div class="kr">${r.map(c=>tus(c, c==="⌫"?"dk":"")).join("")}</div>`).join("");
-    h+=`<div class="kr">${tus("@","w2")}${["@gmail.com","@hotmail.com","@icloud.com",".com"].map(x=>tus(x,"w3 sm")).join("")}${tus("Temizle","w2 dk sm","__sil")}${tus(son,"go w3","__ok")}</div>`;
+    const sol=["@","@gmail.com","@hotmail.com","@icloud.com"].map(x=>tus(x, x==="@"?"":"sm")).join("");
+    const orta=HARF_EN.map(r=>`<div class="kr">${r.map(c=>tus(c, c==="⌫"?"dk":"")).join("")}</div>`).join("");
+    const sag=tus(".com","sm")+tus("Temizle","dk sm","__sil")+tus(son,"go","__ok");
+    h=`<div class="kgrid"><div class="kcol">${sol}</div><div>${orta}</div><div class="kcol">${sag}</div></div>`;
   } else {
     h=HARF_TR.map(r=>`<div class="kr">${r.map(c=>c==="⇧"?tus("⇧","w2 dk"+(shift?" down":""),"__shift"):c==="⌫"?tus("⌫","w2 dk"):tus(shift?buyuk(c):c)).join("")}</div>`).join("");
     h+=`<div class="kr">${tus("-","")}${tus("boşluk","sp sm"," ")}${tus(".","")}${tus(son,"go w3","__ok")}</div>`;
   }
   kb.innerHTML=h;
+  kb.classList.toggle("mail", aktif==="email");
+  aktifGoster();
+}
+// klavye çizildikten sonra aktif kutuyu klavyenin üstünde görünür tut
+function aktifGoster(){
+  const form=document.getElementById("form"); form.classList.toggle("kbon", !!aktif);
+  const body=document.getElementById("formBody");
+  if(!aktif){ body.scrollTop=0; return; }
+  const el=document.querySelector(`.inp[data-f="${aktif}"]`); if(!el) return;
+  const b=body.getBoundingClientRect(), r=el.getBoundingClientRect(), pay=12;
+  if(r.bottom>b.bottom-pay) body.scrollTop+=r.bottom-b.bottom+pay;
+  else if(r.top<b.top+pay) body.scrollTop-=b.top+pay-r.top;
 }
 document.getElementById("kb").addEventListener("pointerdown", e=>{
   const b=e.target.closest(".k"); if(!b) return;
