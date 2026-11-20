@@ -74,7 +74,15 @@ h2{font-size:calc(var(--u)*4.4);letter-spacing:-.04em;margin-bottom:calc(var(--u
 .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
 .chip.on::before{content:"✓ "}
 .izin{display:grid;grid-template-columns:1fr 1fr;gap:calc(var(--u)*1.2);margin-bottom:calc(var(--u)*1.5)}
-.izin .chip{text-align:left;font-size:calc(var(--u)*2.4);padding:calc(var(--u)*2) calc(var(--u)*2.2)}
+.izin .chip{text-align:left;font-size:calc(var(--u)*2.4);padding:calc(var(--u)*2) calc(var(--u)*2.2);display:flex;align-items:center;gap:calc(var(--u)*1.6)}
+/* alışık olunan işaret kutusu */
+.izin .chip::before,.izin .chip.on::before{content:"";flex:none;width:calc(var(--u)*4);height:calc(var(--u)*4);border:3px solid var(--navy);background:#fff;border-radius:calc(var(--u)*.6);display:flex;align-items:center;justify-content:center;font-size:calc(var(--u)*3);font-weight:700;color:var(--navy);line-height:1}
+.izin .chip.on::before{content:"✓"}
+.izin .chip.on{background:#eef1f8;color:var(--ink);border-color:var(--navy)}
+/* üst bardaki gönder düğmesi (klavye açıkken de görünür) */
+#form header .hd{display:flex;gap:calc(var(--u)*1.6);align-items:center}
+#form header .send-top{background:#fff;color:var(--navy);font-weight:700;font-size:calc(var(--u)*2.8);padding:calc(var(--u)*1.4) calc(var(--u)*4);border:0}
+#form header .send-top:disabled{opacity:.5}
 .note{font-size:calc(var(--u)*1.6);color:var(--muted);line-height:1.45}
 .msg{font-size:calc(var(--u)*2.2);color:var(--err);min-height:calc(var(--u)*3);margin-top:calc(var(--u)*1)}
 .send{background:var(--navy);color:#fff;font-weight:700;font-size:calc(var(--u)*3);padding:calc(var(--u)*2.4) calc(var(--u)*5);margin-top:calc(var(--u)*1.5)}
@@ -120,7 +128,7 @@ h2{font-size:calc(var(--u)*4.4);letter-spacing:-.04em;margin-bottom:calc(var(--u
 </section>
 
 <section class="screen" id="form">
-  <header><strong>STUDIO HATCH</strong><button onclick="sifirla()">Vazgeç</button></header>
+  <header><strong>STUDIO HATCH</strong><div class="hd"><button onclick="sifirla()">Vazgeç</button><button class="send-top" id="sendTop" onclick="gonder()">Gönder ✓</button></div></header>
   <div class="body" id="formBody">
     <div>
       <h2>Bilgilerin</h2>
@@ -275,6 +283,7 @@ document.getElementById("kb").addEventListener("pointerdown", e=>{
 });
 
 function hata(t, alan){
+  if(!alan){ aktif=null; ciz(); }   // klavyeyi kapat ki mesaj ve seçenekler görünsün
   document.getElementById("msg").textContent=t;
   if(alan){ const el=document.querySelector(`.inp[data-f="${alan}"]`); el.classList.add("bad"); setTimeout(()=>el.classList.remove("bad"),2500); }
 }
@@ -288,7 +297,7 @@ async function gonder(){
   if(izin.eposta && !mail) return hata("E-postayla ulaşabilmemiz için adresini yaz.","email");
   if(tel){ const d=tel.replace(/\D/g,""); if(d.length<10||d.length>13) return hata("Telefon numarası eksik görünüyor.","telefon"); }
   if(mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return hata("E-posta adresini kontrol et.","email");
-  gonderiliyor=true; const btn=document.getElementById("sendBtn"); btn.disabled=true; btn.textContent="Gönderiliyor…";
+  gonderiliyor=true; const btn=document.getElementById("sendBtn"), ust=document.getElementById("sendTop"); btn.disabled=ust.disabled=true; btn.textContent=ust.textContent="Gönderiliyor…";
   try{
     const { error } = await sb.rpc("ziyaretci_kaydet", { p_ad:ad, p_telefon:tel||null, p_email:mail||null,
       p_izin_eposta:izin.eposta, p_izin_telefon:izin.telefon, p_ilgi:[...ilgi], p_izin_metni:izinMetni() });
@@ -301,7 +310,7 @@ async function gonder(){
     console.error(e);
     hata(navigator.onLine ? "Kaydedilemedi, lütfen tekrar dene." : "İnternet bağlantısı yok. Lütfen tekrar dene.");
   }finally{
-    gonderiliyor=false; btn.disabled=false; btn.textContent="Gönder";
+    gonderiliyor=false; btn.disabled=ust.disabled=false; btn.textContent="Gönder"; ust.textContent="Gönder ✓";
   }
 }
 document.getElementById("thanks").addEventListener("click", sifirla);
