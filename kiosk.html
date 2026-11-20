@@ -14,7 +14,41 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 .screen.on{display:flex}
 
 /* karşılama */
-#welcome{background:var(--navy);color:#fff;justify-content:center;align-items:flex-start;padding:0 8vw;cursor:pointer}
+#welcome{background:var(--navy);color:#fff;justify-content:center;align-items:flex-start;padding:0 8vw calc(var(--u)*12);cursor:pointer;overflow:hidden}
+#welcome .wl-in{position:relative;z-index:1}
+/* yavaşça gezinen renk lekeleri (sadece transform: TV'de akıcı) */
+.orb{position:absolute;border-radius:50%;pointer-events:none;will-change:transform}
+.o1{width:75vw;height:75vw;left:-22vw;top:-38vw;background:radial-gradient(circle,rgba(99,132,255,.55),rgba(99,132,255,0) 65%);animation:drift1 17s ease-in-out infinite alternate}
+.o2{width:62vw;height:62vw;right:-18vw;bottom:-30vw;background:radial-gradient(circle,rgba(255,122,89,.42),rgba(255,122,89,0) 65%);animation:drift2 21s ease-in-out infinite alternate}
+.o3{width:46vw;height:46vw;left:45vw;top:8vh;background:radial-gradient(circle,rgba(45,212,191,.32),rgba(45,212,191,0) 65%);animation:drift3 25s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate(28vw,22vh) scale(1.2)}}
+@keyframes drift2{to{transform:translate(-34vw,-18vh) scale(1.15)}}
+@keyframes drift3{50%{transform:translate(-22vw,18vh) scale(.8)}100%{transform:translate(8vw,-6vh) scale(1.25)}}
+/* başlık harf harf belirir */
+#welcome h1 .ch{display:inline-block;opacity:0;transform:translateY(.55em) rotate(8deg);animation:harf .9s cubic-bezier(.2,.9,.25,1.2) forwards;animation-delay:calc(var(--i)*70ms)}
+@keyframes harf{to{opacity:1;transform:none}}
+/* dönen ilgi alanları */
+.rot{display:flex;align-items:baseline;gap:.35em;font-size:calc(var(--u)*4.4);font-weight:700;letter-spacing:-.03em;margin-bottom:calc(var(--u)*3)}
+.rot-l{color:#aab6d3;font-weight:400}
+.rot-box{display:inline-block;height:1.2em;overflow:hidden;line-height:1.2em}
+#wlRot{display:inline-block;color:#ffd27a}
+#wlRot.gir{animation:rotGir .6s cubic-bezier(.2,.9,.25,1.1)}
+#wlRot.cik{animation:rotCik .35s ease-in forwards}
+@keyframes rotGir{from{transform:translateY(100%);opacity:0}}
+@keyframes rotCik{to{transform:translateY(-100%);opacity:0}}
+/* başla düğmesinin etrafında dalga */
+#welcome .start{position:relative}
+.ring{position:absolute;inset:0;border:2px solid rgba(255,255,255,.85);pointer-events:none;animation:ring 2.6s ease-out infinite}
+.ring.r2{animation-delay:1.3s}
+@keyframes ring{from{opacity:.9;transform:scale(1)}to{opacity:0;transform:scale(1.25,1.9)}}
+.el{display:inline-block;margin-left:.4em;animation:dokun 1.3s ease-in-out infinite}
+@keyframes dokun{50%{transform:translateY(-.18em) scale(.92)}}
+/* altta kayan şerit */
+.marquee{position:absolute;left:0;right:0;bottom:calc(var(--u)*3.5);overflow:hidden;white-space:nowrap;pointer-events:none}
+.mq-track{display:inline-flex;animation:mq 45s linear infinite;will-change:transform}
+.mq-track span{font-size:calc(var(--u)*6.5);font-weight:800;letter-spacing:-.03em;color:transparent;-webkit-text-stroke:1.5px rgba(255,255,255,.28);padding-right:calc(var(--u)*3)}
+.mq-track span.d{color:rgba(255,210,122,.55);-webkit-text-stroke:0}
+@keyframes mq{to{transform:translateX(-50%)}}
 #welcome .eyebrow{font-size:calc(var(--u)*2);letter-spacing:.2em;opacity:.75}
 #welcome h1{font-size:calc(var(--u)*13);letter-spacing:-.06em;line-height:.95;margin:calc(var(--u)*3) 0}
 #welcome p{font-size:calc(var(--u)*3.4);line-height:1.4;max-width:60ch;color:#dbe1ee}
@@ -74,10 +108,15 @@ h2{font-size:calc(var(--u)*4.4);letter-spacing:-.04em;margin-bottom:calc(var(--u
 <body>
 
 <section class="screen on" id="welcome" onclick="basla()">
-  <div class="eyebrow">STUDIO HATCH</div>
-  <h1>Tanışalım.</h1>
-  <p>Atölyelerden, etkinliklerden ve mağazaya gelen yeni ürünlerden ilk sen haberdar ol. Bilgilerini bırakman bir dakika sürer.</p>
-  <button class="start">Başlamak için dokun</button>
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+  <div class="wl-in">
+    <div class="eyebrow">STUDIO HATCH</div>
+    <h1 id="wlBaslik" aria-label="Tanışalım.">Tanışalım.</h1>
+    <div class="rot"><span class="rot-l">İlk sen haberdar ol:</span><span class="rot-box"><span id="wlRot">Atölyeler</span></span></div>
+    <p>Atölyelerden, etkinliklerden ve mağazaya gelen yeni ürünlerden haberin olsun. Bilgilerini bırakman bir dakika sürer.</p>
+    <button class="start"><span class="ring"></span><span class="ring r2"></span>Başlamak için dokun<span class="el">👆</span></button>
+  </div>
+  <div class="marquee"><div class="mq-track" id="wlSerit"></div></div>
 </section>
 
 <section class="screen" id="form">
@@ -131,7 +170,25 @@ const SIRA = ["ad","telefon","email"];
 let v, ilgi, izin, aktif, shift, gonderiliyor=false, bosTimer, tesekkurTimer;
 
 function temiz(){ v={ad:"",telefon:"",email:""}; ilgi=new Set(); izin={eposta:false,telefon:false}; aktif=null; shift=false; }
-function goster(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); }
+/* karşılama animasyonu */
+function wlBaslikOynat(){
+  const h=document.getElementById("wlBaslik");
+  h.innerHTML=[..."Tanışalım."].map((c,i)=>`<span class="ch" style="--i:${i}">${c}</span>`).join("");
+}
+(function wlBaslat(){
+  const kelimeler=ILGI.map(x=>x.split(" & ")[0]);
+  const parca=kelimeler.map(k=>`<span>${k}</span><span class="d">✦</span>`).join("");
+  document.getElementById("wlSerit").innerHTML=parca+parca;   // kesintisiz döngü için iki kez
+  wlBaslikOynat();
+  const rot=document.getElementById("wlRot"); let i=0, tur=0;
+  setInterval(()=>{
+    if(!document.getElementById("welcome").classList.contains("on")) return;
+    rot.className="cik";
+    setTimeout(()=>{ i=(i+1)%kelimeler.length; rot.textContent=kelimeler[i]; rot.className=""; void rot.offsetWidth; rot.className="gir"; },350);
+    if(++tur%6===0) wlBaslikOynat();   // ~15 sn'de bir başlık yeniden belirir
+  },2500);
+})();
+function goster(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id===id)); if(id==="welcome") wlBaslikOynat(); }
 function basla(){
   try{ if(!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(()=>{}); }catch(e){}
   temiz(); ciz(); goster("form"); aktifEt("ad"); dokunuldu();
