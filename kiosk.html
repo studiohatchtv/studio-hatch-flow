@@ -76,6 +76,7 @@ h2{font-size:calc(var(--u)*4.4);letter-spacing:-.04em;margin-bottom:calc(var(--u
 .inp.act{border-color:var(--navy);box-shadow:0 0 0 calc(var(--u)*.5) rgba(16,29,59,.15)}
 .inp.bad{border-color:var(--err)}
 .inp .ph{color:#a0a6b1}
+.inp .pre{font-weight:700;margin-right:.3em}   /* sabit 0 */
 .inp.act::after{content:"";display:inline-block;width:2px;height:1em;background:var(--navy);vertical-align:-.12em;margin-left:2px;animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 .chips{display:flex;flex-wrap:wrap;gap:calc(var(--u)*1.2);margin-bottom:calc(var(--u)*3)}
@@ -184,7 +185,7 @@ const IZIN_METIN = {
 };
 const BOS_SURE = 300, TESEKKUR_SURE = 7;   // saniye (300 = 5 dk)
 
-const PH = { ad:"Adın ve soyadın", telefon:"05xx xxx xx xx", email:"ornek@mail.com" };
+const PH = { ad:"Adın ve soyadın", telefon:"5xx xxx xx xx", email:"ornek@mail.com" };
 const SIRA = ["ad","telefon","email"];
 let v, ilgi, izin, aktif, shift, gonderiliyor=false, bosTimer, tesekkurTimer;
 
@@ -223,12 +224,13 @@ function dokunuldu(){
 ["pointerdown","touchstart","keydown"].forEach(t=>document.addEventListener(t, dokunuldu, {capture:true, passive:true}));
 document.addEventListener("contextmenu", e=>e.preventDefault());
 
-function telGoster(t){ const d=t.replace(/\D/g,""); return [d.slice(0,4),d.slice(4,7),d.slice(7,9),d.slice(9,11)].filter(Boolean).join(" "); }
+// telefon başındaki 0 sabit; v.telefon 0'sız 10 hane tutar
+function telGoster(t){ const d=t.replace(/\D/g,""); return [d.slice(0,3),d.slice(3,6),d.slice(6,8),d.slice(8,10)].filter(Boolean).join(" "); }
 function ciz(){
   document.querySelectorAll(".inp").forEach(el=>{
     const f=el.dataset.f; const val=f==="telefon"?telGoster(v[f]):v[f];
     el.classList.toggle("act", aktif===f);
-    el.innerHTML = val ? esc(val) : (aktif===f ? "" : `<span class="ph">${PH[f]}</span>`);
+    el.innerHTML = (f==="telefon" ? `<span class="pre">0</span>` : "") + (val ? esc(val) : (aktif===f ? "" : `<span class="ph">${PH[f]}</span>`));
   });
   document.getElementById("ilgiler").innerHTML=ILGI.map((x,i)=>`<button class="chip ${ilgi.has(x)?"on":""}" onclick="ilgiDegis(${i})">${esc(x)}</button>`).join("");
   document.getElementById("izEposta").classList.toggle("on", izin.eposta);
@@ -253,7 +255,7 @@ document.querySelectorAll(".inp").forEach(el=>el.addEventListener("click",()=>ak
 /* klavye */
 const HARF_TR=[["q","w","e","r","t","y","u","ı","o","p","ğ","ü"],["a","s","d","f","g","h","j","k","l","ş","i"],["⇧","z","x","c","v","b","n","m","ö","ç","⌫"]];
 const HARF_EN=[["1","2","3","4","5","6","7","8","9","0"],["q","w","e","r","t","y","u","i","o","p"],["a","s","d","f","g","h","j","k","l","-"],["z","x","c","v","b","n","m",".","_","⌫"]];
-const NUM=[["1","2","3"],["4","5","6"],["7","8","9"],["+","0","⌫"]];
+const NUM=[["1","2","3"],["4","5","6"],["7","8","9"],["__sil","0","⌫"]];
 function buyuk(c){ return c==="i"?"İ":c==="ı"?"I":c.toLocaleUpperCase("tr"); }
 function tus(lbl, cls, data){ return `<button class="k ${cls||""}" data-k="${esc(data??lbl)}">${esc(lbl)}</button>`; }
 function klavyeCiz(){
@@ -263,7 +265,7 @@ function klavyeCiz(){
   const son = aktif==="email" ? "Tamam ✓" : "Sonraki →";
   let h="";
   if(aktif==="telefon"){
-    h=NUM.map(r=>`<div class="kr">${r.map(c=>tus(c, "num"+(c==="⌫"?" dk":""))).join("")}</div>`).join("")
+    h=NUM.map(r=>`<div class="kr">${r.map(c=>c==="__sil"?tus("Temizle","num dk sm","__sil"):tus(c, "num"+(c==="⌫"?" dk":""))).join("")}</div>`).join("")
       .replace(/<\/div>$/, tus(son,"go w3","__ok")+"</div>");
   } else if(aktif==="email"){
     const sol=["@","@gmail.com","@hotmail.com","@icloud.com"].map(x=>tus(x, x==="@"?"":"sm")).join("");
@@ -297,9 +299,9 @@ document.getElementById("kb").addEventListener("pointerdown", e=>{
   if(k==="__sil"){ v[f]=""; ciz(); return; }
   if(k==="⌫"){ v[f]=v[f].slice(0,-1); }
   else {
-    const max={ad:80,telefon:14,email:80}[f];
+    const max={ad:80,telefon:10,email:80}[f];
     if(v[f].length>=max) return;
-    if(f==="telefon" && k==="+" && v[f]) return;
+    if(f==="telefon" && (!/^\d$/.test(k) || (k==="0" && !v[f]))) return;   // baştaki 0 zaten sabit
     if(f==="email" && k.startsWith("@") && v[f].includes("@")) return;
     v[f]+=k;
   }
@@ -315,12 +317,12 @@ function hata(t, alan){
 async function gonder(){
   if(gonderiliyor) return;
   aktif=null; ciz();
-  const ad=v.ad.trim().replace(/\s+/g," "), tel=v.telefon.replace(/[^\d+]/g,""), mail=v.email.trim().toLowerCase();
+  const ad=v.ad.trim().replace(/\s+/g," "), tel=v.telefon.replace(/\D/g,"") ? "0"+v.telefon.replace(/\D/g,"") : "", mail=v.email.trim().toLowerCase();
   if(ad.length<2) return hata("Lütfen adını ve soyadını yaz.","ad");
   if(!izin.eposta && !izin.telefon) return hata("Sana nasıl ulaşalım? E-posta veya telefon seç.");
   if(izin.telefon && !tel) return hata("Telefonla ulaşabilmemiz için numaranı yaz.","telefon");
   if(izin.eposta && !mail) return hata("E-postayla ulaşabilmemiz için adresini yaz.","email");
-  if(tel){ const d=tel.replace(/\D/g,""); if(d.length<10||d.length>13) return hata("Telefon numarası eksik görünüyor.","telefon"); }
+  if(tel && tel.length!==11) return hata("Telefon numarası eksik görünüyor (0'dan sonra 10 hane).","telefon");
   if(mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return hata("E-posta adresini kontrol et.","email");
   gonderiliyor=true; const btn=document.getElementById("sendBtn"), ust=document.getElementById("sendTop"); btn.disabled=ust.disabled=true; btn.textContent=ust.textContent="Gönderiliyor…";
   try{
