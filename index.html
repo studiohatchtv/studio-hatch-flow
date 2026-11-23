@@ -3155,6 +3155,7 @@ const SITE_PROGRAM = { culture:["Culture","#0A00FF","#E4E6FF"], wellness:["Welln
 const SITE_AYAR_ALAN = [["saatler","Çalışma saatleri","ör. Salı–Pazar 11:00–21:00\nPazartesi kapalı"],["saatler_en","Çalışma saatleri (EN)","e.g. Tue–Sun 11am–9pm\nClosed Mondays"],
   ["duyuru","Duyuru bandı","Sitenin en üstünde ince bir bant (boş bırakılırsa görünmez)"],["duyuru_en","Duyuru bandı (EN)",""],["immersive_nedir","“Immersive deneyim nedir?” — her gösterim sayfasının altında","Ziyaretçiye immersive deneyimi 2–3 cümleyle anlatın."],["immersive_nedir_en","“What is an immersive experience?” (EN)",""],
   ["genel_sss","Genel SSS — her gösterim sayfasında","İlk satır soru, alt satırlar cevap. Sorular arasında boş satır.\n\nÇocuklar katılabilir mi?\nEvet, …"],["genel_sss_en","General FAQ (EN)",""],
+  ["kvkk","KVKK Aydınlatma Metni (bülten formu)","Boş bırakılırsa sitedeki taslak görünür. Başlıkları tek satır yazın, paragraflar arasında boş satır bırakın."],["kvkk_en","Privacy Notice (EN)",""],
   ["instagram","Instagram kullanıcı adı","studiohatchtv"],["eposta","İletişim e-postası","hello@studiohatch.tv"]];
 let hasWebsite = false, websiteView = "gosterim", siteAyarlar = {}, siteAyarHata = "";
 let editingSiteId = null, siteGorselYeni = null;
@@ -3211,8 +3212,8 @@ function renderSiteAyar(board){
   board.innerHTML=`<div class="listwrap" style="max-width:720px;">
     ${siteAyarHata?`<div class="mg-warn">Ayarlar yüklenemedi. Supabase SQL Editor'de <b>update-website.sql</b> dosyasını çalıştırın.</div>`:""}
     <div style="font-size:13px; color:var(--text-3); margin-bottom:14px;">Buradaki bilgiler sitede herkese görünür. Kaydedince site birkaç saniye içinde güncellenir.</div>
-    ${SITE_AYAR_ALAN.map(([k,l,ph])=>`<div class="field"><label>${l}</label>${/saatler|duyuru|nedir|sss/.test(k)
-      ?`<textarea id="sa_${k}" rows="${/sss/.test(k)?8:/saatler|nedir/.test(k)?3:2}" maxlength="${/sss|nedir/.test(k)?6000:400}" placeholder="${escapeHtml(ph)}" style="resize:vertical; line-height:1.5;">${escapeHtml(siteAyarlar[k]||"")}</textarea>`
+    ${SITE_AYAR_ALAN.map(([k,l,ph])=>`<div class="field"><label>${l}</label>${/saatler|duyuru|nedir|sss|kvkk/.test(k)
+      ?`<textarea id="sa_${k}" rows="${/sss|kvkk/.test(k)?8:/saatler|nedir/.test(k)?3:2}" maxlength="${/kvkk/.test(k)?12000:/sss|nedir/.test(k)?6000:400}" placeholder="${escapeHtml(ph)}" style="resize:vertical; line-height:1.5;">${escapeHtml(siteAyarlar[k]||"")}</textarea>`
       :`<input id="sa_${k}" maxlength="120" placeholder="${escapeHtml(ph)}" value="${escapeHtml(siteAyarlar[k]||"")}">`}</div>`).join("")}
     <button class="btn btn-primary" onclick="saveSiteAyar(this)">Kaydet</button>
   </div>`;
@@ -3608,7 +3609,8 @@ function renderMagaza(){
 /* mağaza — ziyaretçiler (dokunmatik ekrandan bırakılan iletişim bilgileri) */
 const ZY_DURUM = ["Yeni","İletişime geçildi","Ulaşılamadı"];
 const ZY_RENK = { "Yeni":["#fceeee","#c0392b"], "İletişime geçildi":["#E1F5EE","#0F6E56"], "Ulaşılamadı":["#f1efe8","#6b6a62"] };
-let ziyaretciler = [], zyHata = "", zySearch = "", zyIlgi = "", zyIzin = "", zyDurum = "", editingZyId = null;
+let ziyaretciler = [], zyHata = "", zySearch = "", zyIlgi = "", zyIzin = "", zyDurum = "", zyKaynak = "", editingZyId = null;
+const ZY_KAYNAK = { kiosk:"Dokunmatik ekran", web:"Web sitesi" };
 async function loadZiyaretciler(){
   if(!hasMagaza) return;
   try{ ziyaretciler = await fetchAll("magaza_ziyaretcileri","created_at",false); zyHata=""; }
@@ -3625,7 +3627,7 @@ function renderZiyaretci(){
   board.innerHTML=`<div class="listwrap">
     ${zyHata?`<div class="mg-warn">Ziyaretçiler yüklenemedi. Supabase SQL Editor'de <b>update-ziyaretci.sql</b> dosyasını çalıştırın.</div>`:""}
     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; font-size:13px; color:var(--text-2);">
-      <span style="flex:1; min-width:220px;">Dükkândaki dokunmatik ekrandan bırakılan bilgiler. Ekran adresi: <b>${escapeHtml(kioskLink())}</b></span>
+      <span style="flex:1; min-width:220px;">Dükkândaki dokunmatik ekrandan ve web sitesindeki bülten formundan bırakılan bilgiler. Ekran adresi: <b>${escapeHtml(kioskLink())}</b></span>
       <a class="btn" href="kiosk.html" target="_blank" rel="noopener" style="text-decoration:none; font-size:13px;">Ekranı aç ↗</a>
     </div>
     <div class="stats five">
@@ -3639,6 +3641,7 @@ function renderZiyaretci(){
     <div class="mg-filters">
       <input placeholder="Ad, telefon, e-posta ara…" value="${escapeHtml(zySearch)}" oninput="zySearch=this.value; renderZiyaretciTable()">
       <select onchange="zyIzin=this.value; renderZiyaretciTable()">${[["","Tüm izinler"],["eposta","E-posta izni olanlar"],["telefon","Telefon izni olanlar"]].map(([k,l])=>`<option value="${k}" ${k===zyIzin?"selected":""}>${l}</option>`).join("")}</select>
+      <select onchange="zyKaynak=this.value; renderZiyaretciTable()"><option value="">Tüm kaynaklar</option>${Object.entries(ZY_KAYNAK).map(([k,l])=>`<option value="${k}" ${k===zyKaynak?"selected":""}>${l}</option>`).join("")}</select>
       <select onchange="zyDurum=this.value; renderZiyaretciTable()"><option value="">Tüm durumlar</option>${ZY_DURUM.map(d=>`<option ${d===zyDurum?"selected":""}>${d}</option>`).join("")}</select>
     </div>
     <div class="mg-scroll" id="zyTable"></div>
@@ -3647,7 +3650,7 @@ function renderZiyaretci(){
 }
 function zyListe(){
   const q=zySearch.toLocaleLowerCase("tr");
-  return ziyaretciler.filter(z=>(!zyIlgi||(z.ilgi||[]).includes(zyIlgi)) && (!zyDurum||z.durum===zyDurum)
+  return ziyaretciler.filter(z=>(!zyIlgi||(z.ilgi||[]).includes(zyIlgi)) && (!zyDurum||z.durum===zyDurum) && (!zyKaynak||(z.kaynak||"kiosk")===zyKaynak)
     && (!zyIzin||(zyIzin==="eposta"?z.izin_eposta:z.izin_telefon))
     && (!q||[z.ad,z.telefon,z.email].filter(Boolean).join(" ").toLocaleLowerCase("tr").includes(q)));
 }
@@ -3656,7 +3659,7 @@ function renderZiyaretciTable(){
   const list=zyListe();
   const pill=d=>{ const [bg,fg]=ZY_RENK[d]||ZY_RENK["Yeni"]; return `<span class="pill" style="background:${bg}; color:${fg};">${escapeHtml(d)}</span>`; };
   const rows=list.length?list.map(z=>`<tr onclick="openZiyaretci('${z.id}')">
-      <td><b>${escapeHtml(z.ad)}</b><div class="st">${[z.telefon,z.email].filter(Boolean).map(escapeHtml).join(" · ")}</div></td>
+      <td><b>${escapeHtml(z.ad)}</b>${z.kaynak==="web"?` <span class="rh-tag" title="Web sitesi bülten formu">🌐 web</span>`:""}<div class="st">${[z.telefon,z.email].filter(Boolean).map(escapeHtml).join(" · ")}</div></td>
       <td class="st">${zyIzinler(z).join(", ")||"—"}</td>
       <td class="hide-m">${(z.ilgi||[]).map(i=>`<span class="rh-tag">${escapeHtml(i)}</span>`).join("")}</td>
       <td>${pill(z.durum)}</td>
@@ -3670,7 +3673,7 @@ function openZiyaretci(id){
   const blok=(l,v)=>`<div class="field"><label>${escapeHtml(l)}</label><div style="font-size:14px; line-height:1.5; white-space:pre-wrap; word-break:break-word;">${v}</div></div>`;
   document.getElementById("zyModalTitle").textContent=z.ad;
   document.getElementById("zyDetail").innerHTML=`
-    <div style="margin-bottom:10px; font-size:13px; color:var(--text-2);">${fmtFull(localKey(z.created_at))} ${fmtSaat(z.created_at)} · dokunmatik ekran</div>
+    <div style="margin-bottom:10px; font-size:13px; color:var(--text-2);">${fmtFull(localKey(z.created_at))} ${fmtSaat(z.created_at)} · ${escapeHtml(ZY_KAYNAK[z.kaynak]||z.kaynak||"dokunmatik ekran")}</div>
     <div class="rh-actions">${kontakLinks({telefon:z.telefon,email:z.email},"")}</div>
     ${z.telefon?blok("Telefon",escapeHtml(z.telefon)+(z.izin_telefon?"":` <span class="st">· arama/SMS izni yok</span>`)):""}
     ${z.email?blok("E-posta",escapeHtml(z.email)+(z.izin_eposta?"":` <span class="st">· e-posta izni yok</span>`)):""}
