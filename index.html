@@ -1075,8 +1075,12 @@
         <div class="field"><label>Bitiş <span style="font-weight:400; color:var(--text-3);">· boşsa süresiz</span></label><input id="gs_bitis" type="date"></div>
       </div>
       <div class="row2">
-        <div class="field"><label>Seanslar</label><input id="gs_seans" maxlength="200" placeholder="ör. 11:00, 13:00, 15:00, 17:00"></div>
+        <div class="field"><label>Seanslar <span style="font-weight:400; color:var(--text-3);">· belirli başlangıç saatleri varsa</span></label><input id="gs_seans" maxlength="200" placeholder="ör. 11:00, 13:00, 15:00"></div>
         <div class="field"><label>Süre (dakika)</label><input id="gs_sure" inputmode="numeric" placeholder="ör. 40"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Saatler (TR) <span style="font-weight:400; color:var(--text-3);">· seans yerine açık saat</span></label><input id="gs_saatler" maxlength="80" placeholder="ör. Her gün 13:00–22:00"></div>
+        <div class="field"><label>Saatler (EN)</label><input id="gs_saatler_en" maxlength="80" placeholder="e.g. Daily 1pm–10pm"></div>
       </div>
       <div class="row2">
         <div class="field"><label>Yaş (TR)</label><input id="gs_yas" maxlength="40" placeholder="ör. Her yaş · 7+"></div>
@@ -3343,7 +3347,7 @@ function renderGosterimler(board){
       <td>${g.gorsel?`<img class="mg-thumb" src="${escapeHtml(g.gorsel)}" alt="">`:`<span class="st">—</span>`}</td>
       <td><b>${escapeHtml(g.baslik)}</b>${g.one_cikan?" ⭐":""}<div class="st">${escapeHtml(g.alt_baslik||"")}</div></td>
       <td class="hide-m st" style="white-space:nowrap;">${g.baslangic?fmtFull(g.baslangic):"—"} → ${g.bitis?fmtFull(g.bitis):"…"}</td>
-      <td class="hide-m st">${(g.seanslar||[]).join(" · ")||"—"}</td>
+      <td class="hide-m st">${(g.seanslar||[]).join(" · ")||escapeHtml(g.saatler||"")||"—"}</td>
       <td><span class="pill" style="background:${bg}; color:${fg};">${d}</span></td></tr>`; }).join("")
     : `<tr><td colspan="5"><div class="list-empty">Henüz gösterim yok. “+ Gösterim” ile ekleyin (ör. Frida).</div></td></tr>`;
   board.innerHTML=`<div class="listwrap">
@@ -3355,7 +3359,7 @@ function renderGosterimler(board){
     <div class="mg-scroll"><table class="list"><thead><tr><th style="width:56px;"></th><th>Gösterim</th><th class="hide-m">Tarihler</th><th class="hide-m">Seanslar</th><th>Site</th></tr></thead><tbody>${rows}</tbody></table></div>
   </div>`;
 }
-const GOS_ALAN = ["baslik","baslik_en","alt_baslik","alt_baslik_en","ozet","ozet_en","aciklama","aciklama_en","nedir","nedir_en","ne_degildir","ne_degildir_en","sss","sss_en","baslangic","bitis","yas","yas_en","fiyat","fiyat_en","bilet_url"];
+const GOS_ALAN = ["baslik","baslik_en","alt_baslik","alt_baslik_en","ozet","ozet_en","aciklama","aciklama_en","nedir","nedir_en","ne_degildir","ne_degildir_en","sss","sss_en","baslangic","bitis","saatler","saatler_en","yas","yas_en","fiyat","fiyat_en","bilet_url"];
 function openGosterim(id){
   const g = id ? gosterimler.find(x=>x.id===id) : { yayinda:false, one_cikan:false, sira:(gosterimler.length+1)*10, seanslar:[] };
   if(!g) return;
