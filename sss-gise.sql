@@ -18,7 +18,7 @@ on conflict (anahtar) do update
   set deger = case
       when coalesce(trim(site_ayarlar.deger),'') = '' then excluded.deger
       when site_ayarlar.deger ilike '%gişe%' or site_ayarlar.deger ilike '%box office%' then site_ayarlar.deger
-      else split_part(excluded.deger, E'\n\n', 1) || E'\n\n' || site_ayarlar.deger end,
+      else split_part(excluded.deger, chr(10)||chr(10), 1) || chr(10) || chr(10) || site_ayarlar.deger end,
       updated_at = now();
 
 -- 2) Frida'nın kendi SSS'sindeki bilet cevabı
