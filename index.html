@@ -3165,6 +3165,8 @@ const SITE_PROGRAM = { culture:["Immersive Gösteri","#0A00FF","#E4E6FF"], welln
 const SITE_AYAR_ALAN = [["saatler","Çalışma saatleri","ör. Salı–Pazar 11:00–21:00\nPazartesi kapalı"],["saatler_en","Çalışma saatleri (EN)","e.g. Tue–Sun 11am–9pm\nClosed Mondays"],
   ["duyuru","Duyuru bandı","Sitenin en üstünde ince bir bant (boş bırakılırsa görünmez)"],["duyuru_en","Duyuru bandı (EN)",""],["immersive_nedir","“Immersive deneyim nedir?” — her gösterim sayfasının altında","Ziyaretçiye immersive deneyimi 2–3 cümleyle anlatın."],["immersive_nedir_en","“What is an immersive experience?” (EN)",""],
   ["genel_sss","Genel SSS — her gösterim sayfasında","İlk satır soru, alt satırlar cevap. Sorular arasında boş satır.\n\nÇocuklar katılabilir mi?\nEvet, …"],["genel_sss_en","General FAQ (EN)",""],
+  ["ulasim","Ulaşım & otopark — Ziyaret sayfası","Otopark, toplu taşıma, AVM içinde nasıl bulunur… Boşsa yalnızca adres ve harita bağlantısı görünür."],["ulasim_en","Getting here & parking (EN)",""],
+  ["erisim","Erişilebilirlik — Ziyaret sayfası","Asansör, tekerlekli sandalye erişimi, bebek arabası… Boşsa bu başlık görünmez."],["erisim_en","Accessibility (EN)",""],
   ["kvkk","KVKK Aydınlatma Metni (bülten formu)","Boş bırakılırsa sitedeki taslak görünür. Başlıkları tek satır yazın, paragraflar arasında boş satır bırakın."],["kvkk_en","Privacy Notice (EN)",""],
   ["instagram","Instagram kullanıcı adı","studiohatchtv"],["eposta","İletişim e-postası","hello@studiohatch.tv"]];
 let hasWebsite = false, websiteView = "gosterim", siteAyarlar = {}, siteAyarHata = "";
@@ -3222,7 +3224,7 @@ function renderSiteAyar(board){
   board.innerHTML=`<div class="listwrap" style="max-width:720px;">
     ${siteAyarHata?`<div class="mg-warn">Ayarlar yüklenemedi. Supabase SQL Editor'de <b>update-website.sql</b> dosyasını çalıştırın.</div>`:""}
     <div style="font-size:13px; color:var(--text-3); margin-bottom:14px;">Buradaki bilgiler sitede herkese görünür. Kaydedince site birkaç saniye içinde güncellenir.</div>
-    ${SITE_AYAR_ALAN.map(([k,l,ph])=>`<div class="field"><label>${l}</label>${/saatler|duyuru|nedir|sss|kvkk/.test(k)
+    ${SITE_AYAR_ALAN.map(([k,l,ph])=>`<div class="field"><label>${l}</label>${/saatler|duyuru|nedir|sss|kvkk|ulasim|erisim/.test(k)
       ?`<textarea id="sa_${k}" rows="${/sss|kvkk/.test(k)?8:/saatler|nedir/.test(k)?3:2}" maxlength="${/kvkk/.test(k)?12000:/sss|nedir/.test(k)?6000:400}" placeholder="${escapeHtml(ph)}" style="resize:vertical; line-height:1.5;">${escapeHtml(siteAyarlar[k]||"")}</textarea>`
       :`<input id="sa_${k}" maxlength="120" placeholder="${escapeHtml(ph)}" value="${escapeHtml(siteAyarlar[k]||"")}">`}</div>`).join("")}
     <button class="btn btn-primary" onclick="saveSiteAyar(this)">Kaydet</button>
