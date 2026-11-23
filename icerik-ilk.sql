@@ -50,7 +50,7 @@ Every day, 1pm–10pm.
 
 Where can I buy tickets?
 Tickets are on sale on Passo. Use the “Get tickets on Passo” button on this page to choose a day.$t$,
-  'Her gün 13:00–22:00', 'Daily 1pm–10pm', 40, $t$Passo'da', 'On Passo$t$,
+  'Her gün 13:00–22:00', 'Daily 1pm–10pm', 40, $t$Passo'da$t$, 'On Passo',
   'https://www.passo.com.tr/tr/etkinlik-grubu/kokler-ve-izler-frida-kahlo-studio-hatch-bursa-bilet-passo/1395613'
 where not exists (select 1 from public.gosterimler where baslik = 'Frida Kahlo');
 
