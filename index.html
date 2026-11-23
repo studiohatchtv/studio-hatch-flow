@@ -996,7 +996,7 @@
         <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:var(--text); cursor:pointer;"><input type="checkbox" id="si_yayinda" style="width:auto;"> Sitede yayınla</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); cursor:pointer;"><input type="checkbox" id="si_onecikan" style="width:auto;"> ⭐ Ana sayfada öne çıkar</label>
       </div>
-      <div class="field"><label>Program (sitedeki renk)</label><select id="si_program"><option value="culture">Culture (mavi)</option><option value="wellness">Wellness (yeşil)</option><option value="nocturne">Nocturne (gece)</option></select></div>
+      <div class="field"><label>Program (sitedeki renk)</label><select id="si_program"><option value="culture">Immersive Gösteri (mavi)</option><option value="wellness">Wellness (yeşil)</option><option value="nocturne">Etkinlikler (koyu)</option></select></div>
       <div class="row2">
         <div class="field"><label>Başlık (TR · takvimden)</label><input id="si_baslik_tr" disabled></div>
         <div class="field"><label>Başlık (EN)</label><input id="si_baslik_en" maxlength="160" placeholder="boşsa TR kullanılır"></div>
@@ -3151,7 +3151,7 @@ function etkinlikCsv(){
 /* website (www.studiohatch.tv) yönetimi — etkinliklerin site bilgileri + site ayarları */
 const SITE_URL = "https://studiohatchtv.github.io/studio-hatch-tv/";
 const SITE_BUCKET = "site-gorselleri";
-const SITE_PROGRAM = { culture:["Culture","#0A00FF","#E4E6FF"], wellness:["Wellness","#00A562","#D9F5E6"], nocturne:["Nocturne","#17181C","#E9E8FB"] };
+const SITE_PROGRAM = { culture:["Immersive Gösteri","#0A00FF","#E4E6FF"], wellness:["Wellness","#00A562","#D9F5E6"], nocturne:["Etkinlikler","#17181C","#E9E8FB"] };
 const SITE_AYAR_ALAN = [["saatler","Çalışma saatleri","ör. Salı–Pazar 11:00–21:00\nPazartesi kapalı"],["saatler_en","Çalışma saatleri (EN)","e.g. Tue–Sun 11am–9pm\nClosed Mondays"],
   ["duyuru","Duyuru bandı","Sitenin en üstünde ince bir bant (boş bırakılırsa görünmez)"],["duyuru_en","Duyuru bandı (EN)",""],["immersive_nedir","“Immersive deneyim nedir?” — her gösterim sayfasının altında","Ziyaretçiye immersive deneyimi 2–3 cümleyle anlatın."],["immersive_nedir_en","“What is an immersive experience?” (EN)",""],
   ["genel_sss","Genel SSS — her gösterim sayfasında","İlk satır soru, alt satırlar cevap. Sorular arasında boş satır.\n\nÇocuklar katılabilir mi?\nEvet, …"],["genel_sss_en","General FAQ (EN)",""],
