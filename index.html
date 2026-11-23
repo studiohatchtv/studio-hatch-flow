@@ -520,6 +520,17 @@
   <button class="btn btn-primary" onclick="openEtkinlik()">+ Etkinlik</button>
 </div>
 
+<div class="toolbar" id="websiteToolbar" style="display:none;">
+  <button class="btn" onclick="toggleSection('menu')">← Menü</button>
+  <span style="font-weight:600; font-size:15px;">🌐 Website</span>
+  <div class="viewtoggle" style="margin-left:6px;">
+    <button class="vt active" id="wvEtkinlik" onclick="setWebsiteView('etkinlik')">Etkinlikler</button>
+    <button class="vt" id="wvAyar" onclick="setWebsiteView('ayar')">Site bilgileri</button>
+  </div>
+  <div class="spacer"></div>
+  <a class="btn" href="https://studiohatchtv.github.io/studio-hatch-tv/" target="_blank" rel="noopener" style="text-decoration:none;">Siteyi aç ↗</a>
+</div>
+
 <div id="board"></div>
 </div><!-- /app -->
 
@@ -635,6 +646,10 @@
       <div style="font-size:13px; font-weight:600; color:var(--text-2); margin-bottom:8px;">Mağaza erişimi <span style="font-weight:400; color:var(--text-3);">· 🛍️ Mağaza'yı kimler görsün</span></div>
       <div style="font-size:12px; color:var(--text-3); margin-bottom:8px;">Adminler ve Finans erişimi olanlar otomatik görür.</div>
       <div id="adminMagaza"></div>
+
+      <div style="font-size:13px; font-weight:600; color:var(--text-2); margin:18px 0 8px;">Website erişimi <span style="font-weight:400; color:var(--text-3);">· 🌐 sitede etkinlik yayınlayabilenler</span></div>
+      <div style="font-size:12px; color:var(--text-3); margin-bottom:8px;">Adminler otomatik yayınlayabilir.</div>
+      <div id="adminWebsite"></div>
 
     </div>
     <div class="modal-foot" style="justify-content:flex-end;"><button class="btn" onclick="closeAdmin()">Kapat</button></div>
@@ -964,7 +979,54 @@
     </div>
     <div class="modal-foot">
       <button class="link-danger" id="etkinlikDeleteBtn" onclick="deleteEtkinlik()">Sil</button>
-      <div style="display:flex; gap:8px;"><button class="btn" onclick="closeEtkinlik()">Vazgeç</button><button class="btn btn-primary" onclick="saveEtkinlik()">Kaydet</button></div>
+      <div style="display:flex; gap:8px;"><button class="btn" id="etSiteBtn" onclick="etkinliktenSite()" style="display:none;">🌐 Site</button><button class="btn" onclick="closeEtkinlik()">Vazgeç</button><button class="btn btn-primary" onclick="saveEtkinlik()">Kaydet</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Website: etkinlik site bilgileri -->
+<div class="overlay" id="siteOverlay">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-head"><h2 id="siteModalTitle">Site bilgileri</h2><button class="icon-btn" onclick="closeSiteEtkinlik()">&times;</button></div>
+    <div class="modal-body">
+      <div class="mg-today" id="siteOzetTakvim"></div>
+      <div id="siteUyari"></div>
+      <div class="field" style="display:flex; gap:18px; flex-wrap:wrap;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:var(--text); cursor:pointer;"><input type="checkbox" id="si_yayinda" style="width:auto;"> Sitede yayınla</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); cursor:pointer;"><input type="checkbox" id="si_onecikan" style="width:auto;"> ⭐ Ana sayfada öne çıkar</label>
+      </div>
+      <div class="field"><label>Program (sitedeki renk)</label><select id="si_program"><option value="culture">Culture (mavi)</option><option value="wellness">Wellness (yeşil)</option><option value="nocturne">Nocturne (gece)</option></select></div>
+      <div class="row2">
+        <div class="field"><label>Başlık (TR · takvimden)</label><input id="si_baslik_tr" disabled></div>
+        <div class="field"><label>Başlık (EN)</label><input id="si_baslik_en" maxlength="160" placeholder="boşsa TR kullanılır"></div>
+      </div>
+      <div class="field"><label>Tür (EN) <span style="font-weight:400; color:var(--text-3);">· TR takvimdeki türden</span></label><input id="si_tur_en" maxlength="60" placeholder="ör. Workshop, Live, Digital show"></div>
+      <div class="row2">
+        <div class="field"><label>Kısa tanıtım (TR)</label><textarea id="si_ozet" rows="3" maxlength="280" style="resize:vertical; line-height:1.5;" placeholder="Listede ve paylaşımlarda görünen 1–2 cümle"></textarea></div>
+        <div class="field"><label>Kısa tanıtım (EN)</label><textarea id="si_ozet_en" rows="3" maxlength="280" style="resize:vertical; line-height:1.5;"></textarea></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Açıklama (TR)</label><textarea id="si_aciklama" rows="5" maxlength="4000" style="resize:vertical; line-height:1.5;" placeholder="Paragraflar arasında boş satır bırakın"></textarea></div>
+        <div class="field"><label>Açıklama (EN)</label><textarea id="si_aciklama_en" rows="5" maxlength="4000" style="resize:vertical; line-height:1.5;"></textarea></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Bilmen gerekenler (TR)</label><textarea id="si_bilgi" rows="3" maxlength="1000" style="resize:vertical; line-height:1.5;" placeholder="Her satır bir madde&#10;ör. Kontenjan 12 kişi"></textarea></div>
+        <div class="field"><label>Bilmen gerekenler (EN)</label><textarea id="si_bilgi_en" rows="3" maxlength="1000" style="resize:vertical; line-height:1.5;"></textarea></div>
+      </div>
+      <div class="field"><label>Görsel <span style="font-weight:400; color:var(--text-3);">· yatay, en az 1200px (otomatik küçültülür)</span></label><div id="si_gorsel" style="margin-bottom:8px;"></div><input type="file" id="si_dosya" accept="image/jpeg,image/png,image/webp" onchange="siteGorselSec(this)"></div>
+      <div class="field"><label>Bilet linki (Passo)</label><input id="si_bilet" maxlength="500" placeholder="https://www.passo.com.tr/…  (boşsa “kayıt gerekmez”)"></div>
+      <div class="row2">
+        <div class="field"><label>Fiyat (TR)</label><input id="si_fiyat" maxlength="60" placeholder="ör. 350 ₺ · Passo'da · Ücretsiz"></div>
+        <div class="field"><label>Fiyat (EN)</label><input id="si_fiyat_en" maxlength="60" placeholder="e.g. 350 TRY · Free"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Seanslar <span style="font-weight:400; color:var(--text-3);">· birden çoksa</span></label><input id="si_seans" maxlength="200" placeholder="ör. 11:00, 13:00, 15:00"></div>
+        <div class="field"><label>Süre (dakika)</label><input id="si_sure" inputmode="numeric" placeholder="ör. 40"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <a class="btn" id="siteOnizle" href="#" target="_blank" rel="noopener" style="text-decoration:none;">Sitede gör ↗</a>
+      <div style="display:flex; gap:8px;"><button class="btn" onclick="closeSiteEtkinlik()">Vazgeç</button><button class="btn btn-primary" onclick="saveSiteEtkinlik(this)">Kaydet</button></div>
     </div>
   </div>
 </div>
@@ -1117,9 +1179,10 @@ async function boot() {
   hasFinance = (me.email===MASTER_ADMIN) || !!(peopleRows.find(p=>p.user_id===me.id)?.finans);
   document.getElementById("adminBtn").style.display = isAdmin ? "inline-flex" : "none";
   hasMagaza = isAdmin || hasFinance || !!(peopleRows.find(p=>p.user_id===me.id)?.magaza);
+  hasWebsite = isAdmin || !!(peopleRows.find(p=>p.user_id===me.id)?.website);
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadZiyaretciler(), loadKayitlar(), loadKatilim(), loadEtkinlikler(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadZiyaretciler(), loadKayitlar(), loadKatilim(), loadEtkinlikler(), loadSiteAyarlar(), loadTasks()]);
   toggleSection(SECTIONS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "menu", true);
   subscribe();
   initPush();
@@ -1280,7 +1343,8 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"kisiler" }, loadPeople)
     .on("postgres_changes", { event:"*", schema:"public", table:"kontaklar" }, async()=>{ await loadContacts(); refreshRehber(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"kontak_kayitlari" }, async()=>{ await loadKayitlar(); refreshRehber(); })
-    .on("postgres_changes", { event:"*", schema:"public", table:"etkinlikler" }, async()=>{ await loadEtkinlikler(); refreshEtkinlik(); refreshMenu(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"etkinlikler" }, async()=>{ await loadEtkinlikler(); refreshEtkinlik(); refreshWebsite(); refreshMenu(); })
+    .on("postgres_changes", { event:"*", schema:"public", table:"site_ayarlar" }, loadSiteAyarlar)
     .on("postgres_changes", { event:"*", schema:"public", table:"katilim_basvurulari" }, async()=>{ await loadKatilim(); refreshKatilim(); refreshMenu(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
@@ -1758,7 +1822,7 @@ function openAdmin(){
   document.getElementById("adminOverlay").classList.add("show");
 }
 function closeAdmin(){ document.getElementById("adminOverlay").classList.remove("show"); }
-function renderAdminAll(){ renderAdminProjects(); buildAdminLineProject(); renderAdminLines(); buildAdminMemberProject(); renderAdminMembers(); renderAdminPeople(); renderAdminFinance(); renderAdminMagaza(); }
+function renderAdminAll(){ renderAdminProjects(); buildAdminLineProject(); renderAdminLines(); buildAdminMemberProject(); renderAdminMembers(); renderAdminPeople(); renderAdminFinance(); renderAdminMagaza(); renderAdminWebsite(); }
 
 function renderAdminProjects(){
   const el=document.getElementById("adminProjects");
@@ -1936,12 +2000,13 @@ async function loadProducerFiles(){
   producerFiles = data || [];
 }
 function producerFileCount(id){ return producerFiles.filter(f=>f.uretici_id===id).length; }
-const SECTIONS=["menu","isler","magaza","finans","rehber","etkinlik","basvurular","dijitalart","ureticiler"];   // "ureticiler" → Mağaza içindeki sekme
+const SECTIONS=["menu","isler","magaza","finans","rehber","etkinlik","website","basvurular","dijitalart","ureticiler"];   // "ureticiler" → Mağaza içindeki sekme
 function toggleSection(s, fromHistory){
   if(s==="ureticiler"){ magazaView="ureticiler"; s="magaza"; }
   if(s==="finans" && !hasFinance) s="menu";
   if(s==="magaza" && !hasMagaza) s="menu";
   if(s==="basvurular" && !isAdmin) s="menu";
+  if(s==="website" && !hasWebsite) s="menu";
   if(!SECTIONS.includes(s)) s="menu";
   section=s;
   // telefonda "geri" hareketi menüye dönsün
@@ -1949,7 +2014,7 @@ function toggleSection(s, fromHistory){
     if(s==="menu") history.pushState(null,"",location.pathname+location.search);
     else history.pushState(null,"","#"+s);
   }
-  [["taskToolbar","isler"],["prodToolbar","ureticiler"],["finansToolbar","finans"],["eserToolbar","dijitalart"],["magazaToolbar","magaza"],["rehberToolbar","rehber"],["basvuruToolbar","basvurular"],["etkinlikToolbar","etkinlik"]]
+  [["taskToolbar","isler"],["prodToolbar","ureticiler"],["finansToolbar","finans"],["eserToolbar","dijitalart"],["magazaToolbar","magaza"],["rehberToolbar","rehber"],["basvuruToolbar","basvurular"],["etkinlikToolbar","etkinlik"],["websiteToolbar","website"]]
     .forEach(([id,k])=>document.getElementById(id).style.display = s===k ? "flex" : "none");
   toggleCart(false);
   window.scrollTo(0,0);
@@ -1960,6 +2025,7 @@ function toggleSection(s, fromHistory){
   else if(s==="rehber"){ setRehberView(rehberView); }
   else if(s==="basvurular"){ renderKatilim(); }
   else if(s==="etkinlik"){ setEtkinlikView(etkinlikView); }
+  else if(s==="website"){ setWebsiteView(websiteView); }
   else { render(); }
 }
 window.addEventListener("popstate", ()=>{ if(!me) return; const h=location.hash.slice(1); toggleSection(SECTIONS.includes(h)?h:"menu", true); });
@@ -1996,6 +2062,7 @@ function renderMenu(){
     hasFinance?tile("finans","🏦","#E6F1FB","Finans", `Bekleyen ödeme: ${fmtMoney(bekOd.reduce((s,o)=>s+Number(o.tutar||0),0))}`, gecOd?`${gecOd} gecikmiş`:""):"",
     tile("rehber","📇","#FAEEDA","Rehber", `${contacts.length} kişi / firma · influencer, partner…`, takip?`${takip} takip`:""),
     tile("etkinlik","📅","#E6F1FB","Etkinlik Takvimi", `7 gün içinde ${etHafta} etkinlik${etTalep?` · ${etTalep} talep bekliyor`:""}`, etBugun?`Bugün ${etBugun}`:""),
+    hasWebsite?tile("website","🌐","#E4E6FF","Website", `${etkinlikler.filter(e=>e.site_yayinda && (e.durum==="Onaylandı"||e.durum==="Tamamlandı") && etBitis(e)>=todayK).length} etkinlik sitede · studiohatch.tv`, etkinlikler.filter(e=>e.site_yayinda && e.durum!=="Onaylandı" && e.durum!=="Tamamlandı" && e.durum!=="İptal" && etBitis(e)>=todayK).length?"onay bekliyor":""):"",
     isAdmin?tile("basvurular","📨","#F0E6FB","Başvurular", `${katilimlar.length} başvuru · tasarımcı, atölye, etkinlik`, yeniKatilim?`${yeniKatilim} yeni`:""):"",
     tile("dijitalart","🎨","#FBEAF0","Dijital Art", `${eserler.length} eser${yeniBas?` · ${yeniBas} yeni başvuru`:""}`, ""),
     tile("ekip","👥","#EAF3DE","Ekip", `${peopleRows.length} kişi`, "", "openPeople()"),
@@ -2944,6 +3011,7 @@ function openEtkinlik(on){
   editingEtkinlikId=null; etBagKatilim=on.katilim_id||null;
   document.getElementById("etkinlikModalTitle").textContent="Yeni etkinlik";
   document.getElementById("etkinlikDeleteBtn").style.display="none";
+  document.getElementById("etSiteBtn").style.display="none";
   fillEtkinlikForm(Object.assign({ tarih:todayStr(), durum:"Talep", tur:"Diğer", sorumlu:myName&&peopleNames().includes(myName)?myName:"", ekip:[] }, on));
   document.getElementById("etkinlikOverlay").classList.add("show");
   setTimeout(()=>document.getElementById("et_baslik").focus(),50);
@@ -2953,6 +3021,7 @@ function openEtkinlikEdit(id){
   editingEtkinlikId=id; etBagKatilim=e.katilim_id||null;
   document.getElementById("etkinlikModalTitle").textContent=e.baslik;
   document.getElementById("etkinlikDeleteBtn").style.display="inline";
+  document.getElementById("etSiteBtn").style.display=hasWebsite?"":"none";
   fillEtkinlikForm(e);
   document.getElementById("etkinlikOverlay").classList.add("show");
 }
@@ -3010,6 +3079,175 @@ function etkinlikCsv(){
   if(!etkinlikler.length){ alert("Etkinlik yok"); return; }
   const rows=etFiltre(etkinlikler).map(e=>[fmtFull(e.tarih),e.bitis_tarih?fmtFull(e.bitis_tarih):"",etSaatYazi(e),e.baslik,e.tur,e.durum,e.alan,e.sorumlu,(e.ekip||[]).join(", "),e.talep_eden,e.talep_iletisim,e.kisi_sayisi,e.notlar].map(csvGuvenli));
   csvDownload("etkinlik-takvimi.csv",[["Tarih","Bitiş","Saat","Etkinlik","Tür","Durum","Alan","Sorumlu","Ekip","Talep eden","İletişim","Kişi","Not"],...rows]);
+}
+/* website (www.studiohatch.tv) yönetimi — etkinliklerin site bilgileri + site ayarları */
+const SITE_URL = "https://studiohatchtv.github.io/studio-hatch-tv/";
+const SITE_BUCKET = "site-gorselleri";
+const SITE_PROGRAM = { culture:["Culture","#0A00FF","#E4E6FF"], wellness:["Wellness","#00A562","#D9F5E6"], nocturne:["Nocturne","#17181C","#E9E8FB"] };
+const SITE_AYAR_ALAN = [["saatler","Çalışma saatleri","ör. Salı–Pazar 11:00–21:00\nPazartesi kapalı"],["saatler_en","Çalışma saatleri (EN)","e.g. Tue–Sun 11am–9pm\nClosed Mondays"],
+  ["duyuru","Duyuru bandı","Sitenin en üstünde ince bir bant (boş bırakılırsa görünmez)"],["duyuru_en","Duyuru bandı (EN)",""],["instagram","Instagram kullanıcı adı","studiohatchtv"],["eposta","İletişim e-postası","hello@studiohatch.tv"]];
+let hasWebsite = false, websiteView = "etkinlik", siteAyarlar = {}, siteAyarHata = "";
+let editingSiteId = null, siteGorselYeni = null;
+async function loadSiteAyarlar(){
+  if(!hasWebsite) return;
+  const { data, error } = await sb.from("site_ayarlar").select("*");
+  if(error){ siteAyarHata=error.message; return; }
+  siteAyarHata=""; siteAyarlar=Object.fromEntries((data||[]).map(r=>[r.anahtar, r.deger||""]));
+}
+function refreshWebsite(){ if(section==="website") renderWebsite(); }
+function siteDurum(e){
+  if(!e.site_yayinda) return ["Taslak","#f1efe8","#6b6a62"];
+  if(e.durum==="Onaylandı"||e.durum==="Tamamlandı") return ["Sitede","#E1F5EE","#0F6E56"];
+  return ["Onay bekliyor","#FAEEDA","#854F0B"];
+}
+function setWebsiteView(v){
+  websiteView=v;
+  document.getElementById("wvEtkinlik").classList.toggle("active", v==="etkinlik");
+  document.getElementById("wvAyar").classList.toggle("active", v==="ayar");
+  renderWebsite();
+}
+function renderWebsite(){
+  const board=document.getElementById("board"); board.className="";
+  if(websiteView==="ayar"){ renderSiteAyar(board); return; }
+  const bugun=todayStr();
+  const list=etkinlikler.filter(e=>etBitis(e)>=bugun && e.durum!=="İptal").sort((a,b)=>(a.tarih+(a.baslangic_saat||"")).localeCompare(b.tarih+(b.baslangic_saat||"")));
+  const sitede=list.filter(e=>siteDurum(e)[0]==="Sitede");
+  const bekleyen=list.filter(e=>siteDurum(e)[0]==="Onay bekliyor");
+  const gorselsiz=sitede.filter(e=>!e.site_gorsel);
+  const kolonYok=etkinlikler.length && !("site_yayinda" in etkinlikler[0]);
+  const hata=(siteAyarHata||kolonYok) ? `<div class="mg-warn">Website bilgileri yüklenemedi. Supabase SQL Editor'de <b>update-website.sql</b> dosyasını çalıştırın.</div>`:"";
+  const rows=list.length?list.map(e=>{ const [d,bg,fg]=siteDurum(e); const p=SITE_PROGRAM[e.site_program]||SITE_PROGRAM.culture;
+    return `<tr onclick="openSiteEtkinlik('${e.id}')">
+      <td style="white-space:nowrap;"><b>${fmtFull(e.tarih)}</b><div class="st">${etSaatYazi(e)}</div></td>
+      <td><b>${escapeHtml(e.baslik)}</b>${e.site_one_cikan?` <span title="Ana sayfada öne çıkan">⭐</span>`:""}<div class="st">${escapeHtml(e.tur)} · takvimde ${escapeHtml(e.durum)}</div></td>
+      <td class="hide-m"><span class="pill" style="background:${p[2]}; color:${p[1]};">${p[0]}</span></td>
+      <td class="hide-m">${e.site_gorsel?`<img class="mg-thumb" src="${escapeHtml(e.site_gorsel)}" alt="">`:`<span class="st">—</span>`}</td>
+      <td><span class="pill" style="background:${bg}; color:${fg};">${d}</span></td></tr>`; }).join("")
+    : `<tr><td colspan="5"><div class="list-empty">Yaklaşan etkinlik yok. Önce 📅 Etkinlik Takvimi'ne ekleyin.</div></td></tr>`;
+  board.innerHTML=`<div class="listwrap">${hata}
+    <div class="stats">
+      <div class="stat"><span class="n">${sitede.length}</span><span class="l">Sitede görünen</span></div>
+      <div class="stat ${bekleyen.length?"danger":""}"><span class="n">${bekleyen.length}</span><span class="l">Yayında ama onay bekliyor</span></div>
+      <div class="stat ${gorselsiz.length?"danger":""}"><span class="n">${gorselsiz.length}</span><span class="l">Görseli eksik</span></div>
+      <div class="stat"><span class="n">${list.length}</span><span class="l">Yaklaşan (takvim)</span></div>
+    </div>
+    <div style="font-size:13px; color:var(--text-3); margin-bottom:10px;">Takvimdeki yaklaşan etkinlikler. Birine dokunup site bilgilerini girin ve “Sitede yayınla”yı açın. Etkinlik sitede ancak takvimde <b>Onaylandı</b> olduğunda görünür.</div>
+    <div class="mg-scroll"><table class="list"><thead><tr><th>Tarih</th><th>Etkinlik</th><th class="hide-m">Program</th><th class="hide-m">Görsel</th><th>Site</th></tr></thead><tbody>${rows}</tbody></table></div>
+  </div>`;
+}
+function renderSiteAyar(board){
+  board.innerHTML=`<div class="listwrap" style="max-width:720px;">
+    ${siteAyarHata?`<div class="mg-warn">Ayarlar yüklenemedi. Supabase SQL Editor'de <b>update-website.sql</b> dosyasını çalıştırın.</div>`:""}
+    <div style="font-size:13px; color:var(--text-3); margin-bottom:14px;">Buradaki bilgiler sitede herkese görünür. Kaydedince site birkaç saniye içinde güncellenir.</div>
+    ${SITE_AYAR_ALAN.map(([k,l,ph])=>`<div class="field"><label>${l}</label>${/saatler|duyuru/.test(k)
+      ?`<textarea id="sa_${k}" rows="${/saatler/.test(k)?3:2}" maxlength="400" placeholder="${escapeHtml(ph)}" style="resize:vertical; line-height:1.5;">${escapeHtml(siteAyarlar[k]||"")}</textarea>`
+      :`<input id="sa_${k}" maxlength="120" placeholder="${escapeHtml(ph)}" value="${escapeHtml(siteAyarlar[k]||"")}">`}</div>`).join("")}
+    <button class="btn btn-primary" onclick="saveSiteAyar(this)">Kaydet</button>
+  </div>`;
+}
+async function saveSiteAyar(btn){
+  const rows=SITE_AYAR_ALAN.map(([k])=>({ anahtar:k, deger:document.getElementById("sa_"+k).value.trim(), updated_at:new Date().toISOString() }));
+  const ig=rows.find(r=>r.anahtar==="instagram"); ig.deger=ig.deger.replace(/^@/,"").replace(/^https?:\/\/(www\.)?instagram\.com\//i,"").replace(/[^A-Za-z0-9._]/g,"");
+  btn.disabled=true;
+  const { error } = await sb.from("site_ayarlar").upsert(rows);
+  btn.disabled=false;
+  if(error){ alert("Kaydedilemedi: "+error.message); return; }
+  await loadSiteAyarlar(); btn.textContent="✓ Kaydedildi"; setTimeout(()=>{ btn.textContent="Kaydet"; },1500);
+}
+function openSiteEtkinlik(id){
+  const e=etkinlikler.find(x=>x.id===id); if(!e) return;
+  editingSiteId=id; siteGorselYeni=null;
+  const onayli=e.durum==="Onaylandı"||e.durum==="Tamamlandı";
+  document.getElementById("siteModalTitle").textContent=e.baslik;
+  document.getElementById("siteUyari").innerHTML = onayli ? "" : `<div class="mg-warn">Takvimde durumu <b>${escapeHtml(e.durum)}</b>. Yayına açsanız da sitede ancak <b>Onaylandı</b> olunca görünür.</div>`;
+  document.getElementById("siteOzetTakvim").textContent=`${fmtFull(e.tarih)}${e.bitis_tarih?" → "+fmtFull(e.bitis_tarih):""} · ${etSaatYazi(e)} · ${e.tur}`;
+  document.getElementById("si_yayinda").checked=!!e.site_yayinda;
+  document.getElementById("si_onecikan").checked=!!e.site_one_cikan;
+  document.getElementById("si_program").value=e.site_program||"culture";
+  setV("si_baslik_tr",e.baslik); setV("si_baslik_en",e.site_baslik_en); setV("si_tur_en",e.site_tur_en);
+  setV("si_ozet",e.site_ozet); setV("si_ozet_en",e.site_ozet_en); setV("si_aciklama",e.site_aciklama); setV("si_aciklama_en",e.site_aciklama_en);
+  setV("si_bilgi",e.site_bilgiler); setV("si_bilgi_en",e.site_bilgiler_en); setV("si_bilet",e.site_bilet_url);
+  setV("si_fiyat",e.site_fiyat); setV("si_fiyat_en",e.site_fiyat_en); setV("si_seans",(e.site_seanslar||[]).join(", ")); setV("si_sure",e.site_sure_dk!=null?String(e.site_sure_dk):"");
+  document.getElementById("si_dosya").value="";
+  siteGorselCiz(e.site_gorsel);
+  document.getElementById("siteOnizle").href=SITE_URL+"etkinlik.html?id="+encodeURIComponent(e.id);
+  document.getElementById("siteOverlay").classList.add("show");
+}
+function closeSiteEtkinlik(){ document.getElementById("siteOverlay").classList.remove("show"); editingSiteId=null; siteGorselYeni=null; }
+function siteGorselCiz(url){
+  const ok=url && String(url).startsWith(SUPABASE_URL+"/storage/");
+  document.getElementById("si_gorsel").innerHTML = ok ? `<img src="${escapeHtml(url)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">` : `<div class="st" style="padding:18px; text-align:center; background:var(--surface-2); border-radius:10px;">Görsel yok</div>`;
+}
+// görseli tarayıcıda 1600px'e küçültüp JPEG yapar (site hızlı açılsın)
+function siteGorselKucult(file){
+  return new Promise((res,rej)=>{
+    const img=new Image(); const u=URL.createObjectURL(file);
+    img.onload=()=>{ const max=1600, r=Math.min(1, max/Math.max(img.width,img.height));
+      const c=document.createElement("canvas"); c.width=Math.round(img.width*r); c.height=Math.round(img.height*r);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(u);
+      c.toBlob(b=>b?res(b):rej(new Error("Görsel işlenemedi")),"image/jpeg",0.84); };
+    img.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error("Görsel okunamadı")); };
+    img.src=u;
+  });
+}
+async function siteGorselSec(inp){
+  const f=inp.files[0]; if(!f) return;
+  if(!/^image\/(jpeg|png|webp)$/.test(f.type)){ alert("JPG, PNG veya WEBP seçin"); inp.value=""; return; }
+  if(f.size>15*1024*1024){ alert("Görsel 15 MB'tan küçük olmalı"); inp.value=""; return; }
+  try{ siteGorselYeni=await siteGorselKucult(f); document.getElementById("si_gorsel").innerHTML=`<img src="${URL.createObjectURL(siteGorselYeni)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">`; }
+  catch(err){ alert(err.message); inp.value=""; }
+}
+async function saveSiteEtkinlik(btn){
+  const e=etkinlikler.find(x=>x.id===editingSiteId); if(!e) return;
+  const g=id=>document.getElementById(id).value.trim();
+  const bilet=g("si_bilet");
+  if(bilet && !/^https:\/\/\S+$/i.test(bilet)){ alert("Bilet linki https:// ile başlamalı"); return; }
+  const seans=g("si_seans").split(/[,\s]+/).filter(Boolean);
+  if(seans.some(s=>!/^([01]?\d|2[0-3])[:.][0-5]\d$/.test(s))){ alert("Seansları 11:00, 13:30 biçiminde yazın"); return; }
+  const sure=parseInt(g("si_sure"),10);
+  const v={ site_yayinda:document.getElementById("si_yayinda").checked, site_one_cikan:document.getElementById("si_onecikan").checked, site_program:g("si_program"),
+    site_baslik_en:g("si_baslik_en")||null, site_tur_en:g("si_tur_en")||null, site_ozet:g("si_ozet")||null, site_ozet_en:g("si_ozet_en")||null,
+    site_aciklama:g("si_aciklama")||null, site_aciklama_en:g("si_aciklama_en")||null, site_bilgiler:g("si_bilgi")||null, site_bilgiler_en:g("si_bilgi_en")||null,
+    site_bilet_url:bilet||null, site_fiyat:g("si_fiyat")||null, site_fiyat_en:g("si_fiyat_en")||null,
+    site_seanslar:seans.map(s=>s.replace(".",":").padStart(5,"0")), site_sure_dk:Number.isFinite(sure)&&sure>0?sure:null };
+  if(v.site_yayinda && !v.site_ozet){ alert("Yayına almak için en azından kısa tanıtım (TR) yazın"); return; }
+  btn.disabled=true; btn.textContent="Kaydediliyor…";
+  try{
+    let eski=null;
+    if(siteGorselYeni){
+      const yol=`etkinlik/${e.id}/${Date.now()}.jpg`;
+      const up=await sb.storage.from(SITE_BUCKET).upload(yol, siteGorselYeni, { contentType:"image/jpeg", upsert:false });
+      if(up.error) throw up.error;
+      v.site_gorsel=sb.storage.from(SITE_BUCKET).getPublicUrl(yol).data.publicUrl;
+      eski=e.site_gorsel;
+    }
+    const { error } = await sb.from("etkinlikler").update(v).eq("id",e.id);
+    if(error) throw error;
+    // eski görseli kovadan temizle (yalnızca bu etkinliğin klasöründeyse)
+    const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
+    if(eski && eski.startsWith(onek+"etkinlik/"+e.id+"/")) await sb.storage.from(SITE_BUCKET).remove([eski.slice(onek.length)]);
+    closeSiteEtkinlik(); await loadEtkinlikler(); refreshWebsite(); refreshMenu();
+  }catch(err){ alert("Kaydedilemedi: "+err.message); }
+  finally{ btn.disabled=false; btn.textContent="Kaydet"; }
+}
+function etkinliktenSite(){ const id=editingEtkinlikId; closeEtkinlik(); toggleSection("website"); openSiteEtkinlik(id); }
+function renderAdminWebsite(){
+  const el=document.getElementById("adminWebsite"); if(!el) return;
+  const members=peopleRows.filter(p=>p.user_id).slice().sort((a,b)=>a.ad.localeCompare(b.ad,"tr"));
+  if(!members.length){ el.innerHTML=`<div style="color:var(--text-3); font-size:13px;">Henüz üye yok.</div>`; return; }
+  el.innerHTML=members.map(p=>{
+    const auto=p.email===MASTER_ADMIN || p.is_admin;
+    const badge=auto?`<span style="font-size:11px; color:#534AB7; background:#EEEDFE; padding:3px 9px; border-radius:999px;">otomatik</span>`
+      : p.website?`<span style="font-size:11px; color:#0F6E56; background:#E1F5EE; padding:3px 9px; border-radius:999px; cursor:pointer;" onclick="setWebsiteAccess('${p.id}',false)">erişim ✓ (kaldır)</span>`
+      : `<span style="font-size:11px; color:var(--text-3); border:0.5px solid var(--border-2); padding:3px 9px; border-radius:999px; cursor:pointer;" onclick="setWebsiteAccess('${p.id}',true)">erişim ver</span>`;
+    return `<div style="display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--border);">
+      <span style="font-size:13px;">${escapeHtml(p.ad)}</span>${badge}</div>`;
+  }).join("");
+}
+async function setWebsiteAccess(personId, val){
+  const { error } = await sb.from("kisiler").update({ website: val }).eq("id", personId);
+  if(error){ alert("Güncellenemedi: "+error.message); return; }
+  await loadPeople(); renderAdminWebsite();
 }
 // Excel, dış formdan gelen "=..." gibi değerleri formül olarak çalıştırmasın
 function csvGuvenli(v){ const s=String(v??""); return /^[=+\-@\t\r]/.test(s) && !/^\+?[\d\s()-]+$/.test(s) ? "'"+s : s; }
