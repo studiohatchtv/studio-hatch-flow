@@ -524,7 +524,8 @@
   <button class="btn" onclick="toggleSection('menu')">← Menü</button>
   <span style="font-weight:600; font-size:15px;">🌐 Website</span>
   <div class="viewtoggle" style="margin-left:6px;">
-    <button class="vt active" id="wvEtkinlik" onclick="setWebsiteView('etkinlik')">Etkinlikler</button>
+    <button class="vt active" id="wvGosterim" onclick="setWebsiteView('gosterim')">Gösterimler</button>
+    <button class="vt" id="wvEtkinlik" onclick="setWebsiteView('etkinlik')">Etkinlikler</button>
     <button class="vt" id="wvAyar" onclick="setWebsiteView('ayar')">Site bilgileri</button>
   </div>
   <div class="spacer"></div>
@@ -1031,6 +1032,72 @@
   </div>
 </div>
 
+<!-- Website: immersive gösterim -->
+<div class="overlay" id="gosterimOverlay">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-head"><h2 id="gosterimModalTitle">Gösterim</h2><button class="icon-btn" onclick="closeGosterim()">&times;</button></div>
+    <div class="modal-body">
+      <div class="field" style="display:flex; gap:18px; flex-wrap:wrap;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:var(--text); cursor:pointer;"><input type="checkbox" id="gs_yayinda" style="width:auto;"> Sitede yayınla</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); cursor:pointer;"><input type="checkbox" id="gs_onecikan" style="width:auto;"> ⭐ Ana sayfada büyük göster</label>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Gösterim adı (TR)</label><input id="gs_baslik" maxlength="120" placeholder="ör. Frida Kahlo"></div>
+        <div class="field"><label>Gösterim adı (EN)</label><input id="gs_baslik_en" maxlength="120"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Üst başlık (TR)</label><input id="gs_alt_baslik" maxlength="120" placeholder="ör. Kökler ve İzler"></div>
+        <div class="field"><label>Üst başlık (EN)</label><input id="gs_alt_baslik_en" maxlength="120" placeholder="e.g. Roots and Traces"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Kısa tanıtım (TR)</label><textarea id="gs_ozet" rows="3" maxlength="300" style="resize:vertical; line-height:1.5;" placeholder="Kartta ve paylaşımlarda görünen 1–2 cümle"></textarea></div>
+        <div class="field"><label>Kısa tanıtım (EN)</label><textarea id="gs_ozet_en" rows="3" maxlength="300" style="resize:vertical; line-height:1.5;"></textarea></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Açıklama (TR)</label><textarea id="gs_aciklama" rows="6" maxlength="6000" style="resize:vertical; line-height:1.5;" placeholder="Hikâye, içerik… Paragraflar arasında boş satır"></textarea></div>
+        <div class="field"><label>Açıklama (EN)</label><textarea id="gs_aciklama_en" rows="6" maxlength="6000" style="resize:vertical; line-height:1.5;"></textarea></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>✓ Bu deneyim… (TR)</label><textarea id="gs_nedir" rows="4" maxlength="1500" style="resize:vertical; line-height:1.5;" placeholder="Her satır bir madde&#10;ör. Görüntüler dört bir yanınızı sarar"></textarea></div>
+        <div class="field"><label>✓ This experience is… (EN)</label><textarea id="gs_nedir_en" rows="4" maxlength="1500" style="resize:vertical; line-height:1.5;"></textarea></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>✕ …bu değil (TR)</label><textarea id="gs_ne_degildir" rows="4" maxlength="1500" style="resize:vertical; line-height:1.5;" placeholder="Her satır bir madde&#10;ör. Orijinal tabloların sergilendiği bir müze sergisi değil"></textarea></div>
+        <div class="field"><label>✕ …it isn't (EN)</label><textarea id="gs_ne_degildir_en" rows="4" maxlength="1500" style="resize:vertical; line-height:1.5;"></textarea></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Bu gösterime özel SSS (TR)</label><textarea id="gs_sss" rows="7" maxlength="8000" style="resize:vertical; line-height:1.5;" placeholder="İlk satır soru, alt satırlar cevap.&#10;Sorular arasında boş satır.&#10;&#10;Gösterim kaç dakika?&#10;Yaklaşık 40 dakika."></textarea></div>
+        <div class="field"><label>FAQ for this show (EN)</label><textarea id="gs_sss_en" rows="7" maxlength="8000" style="resize:vertical; line-height:1.5;"></textarea></div>
+      </div>
+      <div class="field"><label>Görsel <span style="font-weight:400; color:var(--text-3);">· afiş/kapak, en az 1200px (otomatik küçültülür)</span></label><div id="gs_gorsel" style="margin-bottom:8px;"></div><input type="file" id="gs_dosya" accept="image/jpeg,image/png,image/webp" onchange="gosterimGorselSec(this)"></div>
+      <div class="row2">
+        <div class="field"><label>Başlangıç</label><input id="gs_baslangic" type="date"></div>
+        <div class="field"><label>Bitiş <span style="font-weight:400; color:var(--text-3);">· boşsa süresiz</span></label><input id="gs_bitis" type="date"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Seanslar</label><input id="gs_seans" maxlength="200" placeholder="ör. 11:00, 13:00, 15:00, 17:00"></div>
+        <div class="field"><label>Süre (dakika)</label><input id="gs_sure" inputmode="numeric" placeholder="ör. 40"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Yaş (TR)</label><input id="gs_yas" maxlength="40" placeholder="ör. Her yaş · 7+"></div>
+        <div class="field"><label>Yaş (EN)</label><input id="gs_yas_en" maxlength="40" placeholder="e.g. All ages"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Fiyat (TR)</label><input id="gs_fiyat" maxlength="60" placeholder="ör. 450 ₺'den başlayan"></div>
+        <div class="field"><label>Fiyat (EN)</label><input id="gs_fiyat_en" maxlength="60"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Bilet linki (Passo)</label><input id="gs_bilet_url" maxlength="500" placeholder="https://www.passo.com.tr/…"></div>
+        <div class="field"><label>Sıra <span style="font-weight:400; color:var(--text-3);">· küçük olan önce</span></label><input id="gs_sira" inputmode="numeric"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div style="display:flex; gap:12px; align-items:center;"><button class="link-danger" id="gosterimDeleteBtn" onclick="deleteGosterim()">Sil</button><a class="btn" id="gosterimOnizle" href="#" target="_blank" rel="noopener" style="text-decoration:none;">Sitede gör ↗</a></div>
+      <div style="display:flex; gap:8px;"><button class="btn" onclick="closeGosterim()">Vazgeç</button><button class="btn btn-primary" onclick="saveGosterim(this)">Kaydet</button></div>
+    </div>
+  </div>
+</div>
+
 <!-- Bildirimler (inbox) modal -->
 <div class="overlay" id="inboxOverlay">
   <div class="modal" style="max-width: 440px;">
@@ -1182,7 +1249,7 @@ async function boot() {
   hasWebsite = isAdmin || !!(peopleRows.find(p=>p.user_id===me.id)?.website);
   await loadProjectsAndLines();
   buildChips();
-  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadZiyaretciler(), loadKayitlar(), loadKatilim(), loadEtkinlikler(), loadSiteAyarlar(), loadTasks()]);
+  await Promise.all([loadContacts(), loadFiles(), loadComments(), loadProducers(), loadProducerFiles(), loadEserler(), loadEserFiles(), loadBildirimler(), loadOdemeler(), loadAvanslar(), loadUrunler(), loadSatislar(), loadZiyaretciler(), loadKayitlar(), loadKatilim(), loadEtkinlikler(), loadSiteAyarlar(), loadGosterimler(), loadTasks()]);
   toggleSection(SECTIONS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "menu", true);
   subscribe();
   initPush();
@@ -1345,6 +1412,7 @@ function subscribe(){
     .on("postgres_changes", { event:"*", schema:"public", table:"kontak_kayitlari" }, async()=>{ await loadKayitlar(); refreshRehber(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"etkinlikler" }, async()=>{ await loadEtkinlikler(); refreshEtkinlik(); refreshWebsite(); refreshMenu(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"site_ayarlar" }, loadSiteAyarlar)
+    .on("postgres_changes", { event:"*", schema:"public", table:"gosterimler" }, async()=>{ await loadGosterimler(); refreshWebsite(); refreshMenu(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"katilim_basvurulari" }, async()=>{ await loadKatilim(); refreshKatilim(); refreshMenu(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"is_dosyalari" }, async()=>{ await loadFiles(); if(editingId) renderFileList(editingId); render(); })
     .on("postgres_changes", { event:"*", schema:"public", table:"yorumlar" }, async()=>{ await loadComments(); if(editingId) renderComments(editingId); render(); })
@@ -2062,7 +2130,7 @@ function renderMenu(){
     hasFinance?tile("finans","🏦","#E6F1FB","Finans", `Bekleyen ödeme: ${fmtMoney(bekOd.reduce((s,o)=>s+Number(o.tutar||0),0))}`, gecOd?`${gecOd} gecikmiş`:""):"",
     tile("rehber","📇","#FAEEDA","Rehber", `${contacts.length} kişi / firma · influencer, partner…`, takip?`${takip} takip`:""),
     tile("etkinlik","📅","#E6F1FB","Etkinlik Takvimi", `7 gün içinde ${etHafta} etkinlik${etTalep?` · ${etTalep} talep bekliyor`:""}`, etBugun?`Bugün ${etBugun}`:""),
-    hasWebsite?tile("website","🌐","#E4E6FF","Website", `${etkinlikler.filter(e=>e.site_yayinda && (e.durum==="Onaylandı"||e.durum==="Tamamlandı") && etBitis(e)>=todayK).length} etkinlik sitede · studiohatch.tv`, etkinlikler.filter(e=>e.site_yayinda && e.durum!=="Onaylandı" && e.durum!=="Tamamlandı" && e.durum!=="İptal" && etBitis(e)>=todayK).length?"onay bekliyor":""):"",
+    hasWebsite?tile("website","🌐","#E4E6FF","Website", `${gosterimler.filter(g=>gosterimDurum(g)[0]==="Gösterimde"||gosterimDurum(g)[0]==="Yakında").length} gösterim · ${etkinlikler.filter(e=>e.site_yayinda && (e.durum==="Onaylandı"||e.durum==="Tamamlandı") && etBitis(e)>=todayK).length} etkinlik sitede`, etkinlikler.filter(e=>e.site_yayinda && e.durum!=="Onaylandı" && e.durum!=="Tamamlandı" && e.durum!=="İptal" && etBitis(e)>=todayK).length?"onay bekliyor":""):"",
     isAdmin?tile("basvurular","📨","#F0E6FB","Başvurular", `${katilimlar.length} başvuru · tasarımcı, atölye, etkinlik`, yeniKatilim?`${yeniKatilim} yeni`:""):"",
     tile("dijitalart","🎨","#FBEAF0","Dijital Art", `${eserler.length} eser${yeniBas?` · ${yeniBas} yeni başvuru`:""}`, ""),
     tile("ekip","👥","#EAF3DE","Ekip", `${peopleRows.length} kişi`, "", "openPeople()"),
@@ -3085,8 +3153,10 @@ const SITE_URL = "https://studiohatchtv.github.io/studio-hatch-tv/";
 const SITE_BUCKET = "site-gorselleri";
 const SITE_PROGRAM = { culture:["Culture","#0A00FF","#E4E6FF"], wellness:["Wellness","#00A562","#D9F5E6"], nocturne:["Nocturne","#17181C","#E9E8FB"] };
 const SITE_AYAR_ALAN = [["saatler","Çalışma saatleri","ör. Salı–Pazar 11:00–21:00\nPazartesi kapalı"],["saatler_en","Çalışma saatleri (EN)","e.g. Tue–Sun 11am–9pm\nClosed Mondays"],
-  ["duyuru","Duyuru bandı","Sitenin en üstünde ince bir bant (boş bırakılırsa görünmez)"],["duyuru_en","Duyuru bandı (EN)",""],["instagram","Instagram kullanıcı adı","studiohatchtv"],["eposta","İletişim e-postası","hello@studiohatch.tv"]];
-let hasWebsite = false, websiteView = "etkinlik", siteAyarlar = {}, siteAyarHata = "";
+  ["duyuru","Duyuru bandı","Sitenin en üstünde ince bir bant (boş bırakılırsa görünmez)"],["duyuru_en","Duyuru bandı (EN)",""],["immersive_nedir","“Immersive deneyim nedir?” — her gösterim sayfasının altında","Ziyaretçiye immersive deneyimi 2–3 cümleyle anlatın."],["immersive_nedir_en","“What is an immersive experience?” (EN)",""],
+  ["genel_sss","Genel SSS — her gösterim sayfasında","İlk satır soru, alt satırlar cevap. Sorular arasında boş satır.\n\nÇocuklar katılabilir mi?\nEvet, …"],["genel_sss_en","General FAQ (EN)",""],
+  ["instagram","Instagram kullanıcı adı","studiohatchtv"],["eposta","İletişim e-postası","hello@studiohatch.tv"]];
+let hasWebsite = false, websiteView = "gosterim", siteAyarlar = {}, siteAyarHata = "";
 let editingSiteId = null, siteGorselYeni = null;
 async function loadSiteAyarlar(){
   if(!hasWebsite) return;
@@ -3102,6 +3172,7 @@ function siteDurum(e){
 }
 function setWebsiteView(v){
   websiteView=v;
+  document.getElementById("wvGosterim").classList.toggle("active", v==="gosterim");
   document.getElementById("wvEtkinlik").classList.toggle("active", v==="etkinlik");
   document.getElementById("wvAyar").classList.toggle("active", v==="ayar");
   renderWebsite();
@@ -3109,6 +3180,7 @@ function setWebsiteView(v){
 function renderWebsite(){
   const board=document.getElementById("board"); board.className="";
   if(websiteView==="ayar"){ renderSiteAyar(board); return; }
+  if(websiteView==="gosterim"){ renderGosterimler(board); return; }
   const bugun=todayStr();
   const list=etkinlikler.filter(e=>etBitis(e)>=bugun && e.durum!=="İptal").sort((a,b)=>(a.tarih+(a.baslangic_saat||"")).localeCompare(b.tarih+(b.baslangic_saat||"")));
   const sitede=list.filter(e=>siteDurum(e)[0]==="Sitede");
@@ -3139,8 +3211,8 @@ function renderSiteAyar(board){
   board.innerHTML=`<div class="listwrap" style="max-width:720px;">
     ${siteAyarHata?`<div class="mg-warn">Ayarlar yüklenemedi. Supabase SQL Editor'de <b>update-website.sql</b> dosyasını çalıştırın.</div>`:""}
     <div style="font-size:13px; color:var(--text-3); margin-bottom:14px;">Buradaki bilgiler sitede herkese görünür. Kaydedince site birkaç saniye içinde güncellenir.</div>
-    ${SITE_AYAR_ALAN.map(([k,l,ph])=>`<div class="field"><label>${l}</label>${/saatler|duyuru/.test(k)
-      ?`<textarea id="sa_${k}" rows="${/saatler/.test(k)?3:2}" maxlength="400" placeholder="${escapeHtml(ph)}" style="resize:vertical; line-height:1.5;">${escapeHtml(siteAyarlar[k]||"")}</textarea>`
+    ${SITE_AYAR_ALAN.map(([k,l,ph])=>`<div class="field"><label>${l}</label>${/saatler|duyuru|nedir|sss/.test(k)
+      ?`<textarea id="sa_${k}" rows="${/sss/.test(k)?8:/saatler|nedir/.test(k)?3:2}" maxlength="${/sss|nedir/.test(k)?6000:400}" placeholder="${escapeHtml(ph)}" style="resize:vertical; line-height:1.5;">${escapeHtml(siteAyarlar[k]||"")}</textarea>`
       :`<input id="sa_${k}" maxlength="120" placeholder="${escapeHtml(ph)}" value="${escapeHtml(siteAyarlar[k]||"")}">`}</div>`).join("")}
     <button class="btn btn-primary" onclick="saveSiteAyar(this)">Kaydet</button>
   </div>`;
@@ -3248,6 +3320,104 @@ async function setWebsiteAccess(personId, val){
   const { error } = await sb.from("kisiler").update({ website: val }).eq("id", personId);
   if(error){ alert("Güncellenemedi: "+error.message); return; }
   await loadPeople(); renderAdminWebsite();
+}
+/* immersive gösterimler (sitede ayrı bölüm + alt sayfa) */
+let gosterimler = [], gosterimHata = "", editingGosterimId = null, gosterimGorselYeni = null;
+async function loadGosterimler(){
+  if(!hasWebsite) return;
+  const { data, error } = await sb.from("gosterimler").select("*").order("sira",{ascending:true}).order("baslangic",{ascending:true});
+  if(error){ gosterimHata=error.message; gosterimler=[]; return; }
+  gosterimHata=""; gosterimler=data||[];
+}
+function gosterimDurum(g){
+  const b=todayStr();
+  if(!g.yayinda) return ["Taslak","#f1efe8","#6b6a62"];
+  if(g.bitis && g.bitis<b) return ["Sona erdi","#f1efe8","#6b6a62"];
+  if(g.baslangic && g.baslangic>b) return ["Yakında","#E6F1FB","#185FA5"];
+  return ["Gösterimde","#E1F5EE","#0F6E56"];
+}
+function renderGosterimler(board){
+  const rows=gosterimler.length?gosterimler.map(g=>{ const [d,bg,fg]=gosterimDurum(g);
+    return `<tr onclick="openGosterim('${g.id}')">
+      <td>${g.gorsel?`<img class="mg-thumb" src="${escapeHtml(g.gorsel)}" alt="">`:`<span class="st">—</span>`}</td>
+      <td><b>${escapeHtml(g.baslik)}</b>${g.one_cikan?" ⭐":""}<div class="st">${escapeHtml(g.alt_baslik||"")}</div></td>
+      <td class="hide-m st" style="white-space:nowrap;">${g.baslangic?fmtFull(g.baslangic):"—"} → ${g.bitis?fmtFull(g.bitis):"…"}</td>
+      <td class="hide-m st">${(g.seanslar||[]).join(" · ")||"—"}</td>
+      <td><span class="pill" style="background:${bg}; color:${fg};">${d}</span></td></tr>`; }).join("")
+    : `<tr><td colspan="5"><div class="list-empty">Henüz gösterim yok. “+ Gösterim” ile ekleyin (ör. Frida).</div></td></tr>`;
+  board.innerHTML=`<div class="listwrap">
+    ${gosterimHata?`<div class="mg-warn">Gösterimler yüklenemedi. Supabase SQL Editor'de <b>update-gosterim.sql</b> dosyasını çalıştırın.</div>`:""}
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+      <div style="font-size:13px; color:var(--text-3);">Immersive gösterimler sitede ayrı bölümde, yan yana kayan kartlar olarak görünür; her birinin kendi sayfası var (açıklama, nedir/ne değildir, SSS).</div>
+      <button class="btn btn-primary" onclick="openGosterim()">+ Gösterim</button>
+    </div>
+    <div class="mg-scroll"><table class="list"><thead><tr><th style="width:56px;"></th><th>Gösterim</th><th class="hide-m">Tarihler</th><th class="hide-m">Seanslar</th><th>Site</th></tr></thead><tbody>${rows}</tbody></table></div>
+  </div>`;
+}
+const GOS_ALAN = ["baslik","baslik_en","alt_baslik","alt_baslik_en","ozet","ozet_en","aciklama","aciklama_en","nedir","nedir_en","ne_degildir","ne_degildir_en","sss","sss_en","baslangic","bitis","yas","yas_en","fiyat","fiyat_en","bilet_url"];
+function openGosterim(id){
+  const g = id ? gosterimler.find(x=>x.id===id) : { yayinda:false, one_cikan:false, sira:(gosterimler.length+1)*10, seanslar:[] };
+  if(!g) return;
+  editingGosterimId=id||null; gosterimGorselYeni=null;
+  document.getElementById("gosterimModalTitle").textContent = id ? g.baslik : "Yeni gösterim";
+  document.getElementById("gosterimDeleteBtn").style.display = id ? "inline" : "none";
+  GOS_ALAN.forEach(k=>setV("gs_"+k, g[k]));
+  setV("gs_seans",(g.seanslar||[]).join(", ")); setV("gs_sure",g.sure_dk!=null?String(g.sure_dk):""); setV("gs_sira",String(g.sira??0));
+  document.getElementById("gs_yayinda").checked=!!g.yayinda; document.getElementById("gs_onecikan").checked=!!g.one_cikan;
+  document.getElementById("gs_dosya").value="";
+  const ok=g.gorsel && String(g.gorsel).startsWith(SUPABASE_URL+"/storage/");
+  document.getElementById("gs_gorsel").innerHTML = ok ? `<img src="${escapeHtml(g.gorsel)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">` : `<div class="st" style="padding:18px; text-align:center; background:var(--surface-2); border-radius:10px;">Görsel yok</div>`;
+  const on=document.getElementById("gosterimOnizle"); on.style.display = id ? "" : "none"; if(id) on.href=SITE_URL+"gosterim.html?id="+encodeURIComponent(id);
+  document.getElementById("gosterimOverlay").classList.add("show");
+  if(!id) setTimeout(()=>document.getElementById("gs_baslik").focus(),50);
+}
+function closeGosterim(){ document.getElementById("gosterimOverlay").classList.remove("show"); editingGosterimId=null; gosterimGorselYeni=null; }
+async function gosterimGorselSec(inp){
+  const f=inp.files[0]; if(!f) return;
+  if(!/^image\/(jpeg|png|webp)$/.test(f.type)){ alert("JPG, PNG veya WEBP seçin"); inp.value=""; return; }
+  if(f.size>15*1024*1024){ alert("Görsel 15 MB'tan küçük olmalı"); inp.value=""; return; }
+  try{ gosterimGorselYeni=await siteGorselKucult(f); document.getElementById("gs_gorsel").innerHTML=`<img src="${URL.createObjectURL(gosterimGorselYeni)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">`; }
+  catch(err){ alert(err.message); inp.value=""; }
+}
+async function saveGosterim(btn){
+  const g=id=>document.getElementById(id).value.trim();
+  const v={}; GOS_ALAN.forEach(k=>{ v[k]=g("gs_"+k)||null; });
+  if(!v.baslik){ alert("Gösterim adı gerekli"); return; }
+  if(v.bilet_url && !/^https:\/\/\S+$/i.test(v.bilet_url)){ alert("Bilet linki https:// ile başlamalı"); return; }
+  if(v.baslangic && v.bitis && v.bitis<v.baslangic){ alert("Bitiş tarihi başlangıçtan önce olamaz"); return; }
+  const seans=g("gs_seans").split(/[,\s]+/).filter(Boolean);
+  if(seans.some(s=>!/^([01]?\d|2[0-3])[:.][0-5]\d$/.test(s))){ alert("Seansları 11:00, 13:30 biçiminde yazın"); return; }
+  v.seanslar=seans.map(s=>s.replace(".",":").padStart(5,"0"));
+  const sure=parseInt(g("gs_sure"),10); v.sure_dk=Number.isFinite(sure)&&sure>0?sure:null;
+  const sira=parseInt(g("gs_sira"),10); v.sira=Number.isFinite(sira)?sira:0;
+  v.yayinda=document.getElementById("gs_yayinda").checked; v.one_cikan=document.getElementById("gs_onecikan").checked;
+  if(v.yayinda && !v.ozet){ alert("Yayına almak için en azından kısa tanıtım (TR) yazın"); return; }
+  btn.disabled=true; btn.textContent="Kaydediliyor…";
+  try{
+    let id=editingGosterimId, eski=null;
+    if(!id){ const { data, error } = await sb.from("gosterimler").insert(v).select("id").single(); if(error) throw error; id=data.id; }
+    if(gosterimGorselYeni){
+      const yol=`gosterim/${id}/${Date.now()}.jpg`;
+      const up=await sb.storage.from(SITE_BUCKET).upload(yol, gosterimGorselYeni, { contentType:"image/jpeg", upsert:false });
+      if(up.error) throw up.error;
+      eski=(gosterimler.find(x=>x.id===id)||{}).gorsel;
+      v.gorsel=sb.storage.from(SITE_BUCKET).getPublicUrl(yol).data.publicUrl;
+    }
+    if(editingGosterimId || v.gorsel){ const { error } = await sb.from("gosterimler").update(v).eq("id",id); if(error) throw error; }
+    const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
+    if(eski && eski.startsWith(onek+"gosterim/"+id+"/")) await sb.storage.from(SITE_BUCKET).remove([eski.slice(onek.length)]);
+    closeGosterim(); await loadGosterimler(); refreshWebsite(); refreshMenu();
+  }catch(err){ alert("Kaydedilemedi: "+err.message); }
+  finally{ btn.disabled=false; btn.textContent="Kaydet"; }
+}
+async function deleteGosterim(){
+  const g=gosterimler.find(x=>x.id===editingGosterimId); if(!g) return;
+  if(!confirm(`“${g.baslik}” ve görseli kalıcı olarak silinsin mi?\nSadece siteden kaldırmak için “Sitede yayınla”yı kapatmanız yeterli.`)) return;
+  const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
+  if(g.gorsel && g.gorsel.startsWith(onek+"gosterim/"+g.id+"/")) await sb.storage.from(SITE_BUCKET).remove([g.gorsel.slice(onek.length)]);
+  const { error } = await sb.from("gosterimler").delete().eq("id",g.id);
+  if(error){ alert("Silinemedi: "+error.message); return; }
+  closeGosterim(); await loadGosterimler(); refreshWebsite(); refreshMenu();
 }
 // Excel, dış formdan gelen "=..." gibi değerleri formül olarak çalıştırmasın
 function csvGuvenli(v){ const s=String(v??""); return /^[=+\-@\t\r]/.test(s) && !/^\+?[\d\s()-]+$/.test(s) ? "'"+s : s; }
