@@ -1016,6 +1016,7 @@
       </div>
       <div class="field"><label>Görsel <span style="font-weight:400; color:var(--text-3);">· yatay, en az 1200px (otomatik küçültülür)</span></label><div id="si_gorsel" style="margin-bottom:8px;"></div><input type="file" id="si_dosya" accept="image/jpeg,image/png,image/webp" onchange="siteGorselSec(this)"></div>
       <div class="field"><label>Story video <span style="font-weight:400; color:var(--text-3);">· isteğe bağlı · dikey 9:16 · MP4/MOV · en fazla 50 MB · varsa sitede görsel yerine oynar</span></label><div id="si_video" style="margin-bottom:8px;"></div><input type="file" id="si_vdosya" accept="video/mp4,video/quicktime,video/webm" onchange="videoSec(this,'si')"></div>
+      <div class="field"><label>Galeri <span style="font-weight:400; color:var(--text-3);">· isteğe bağlı · en fazla 12 fotoğraf · sayfada “Galeri” bölümünde görünür</span></label><div id="si_galeri" style="margin-bottom:8px;"></div><input type="file" id="si_gdosya" accept="image/jpeg,image/png,image/webp" multiple onchange="galeriSec(this,'si')"></div>
       <div class="field"><label>Bilet linki (Passo)</label><input id="si_bilet" maxlength="500" placeholder="https://www.passo.com.tr/…  (boşsa “kayıt gerekmez”)"></div>
       <div class="row2">
         <div class="field"><label>Fiyat (TR)</label><input id="si_fiyat" maxlength="60" placeholder="ör. 350 ₺ · Passo'da · Ücretsiz"></div>
@@ -1072,6 +1073,7 @@
       </div>
       <div class="field"><label>Görsel <span style="font-weight:400; color:var(--text-3);">· afiş/kapak, en az 1200px (otomatik küçültülür)</span></label><div id="gs_gorsel" style="margin-bottom:8px;"></div><input type="file" id="gs_dosya" accept="image/jpeg,image/png,image/webp" onchange="gosterimGorselSec(this)"></div>
       <div class="field"><label>Story video <span style="font-weight:400; color:var(--text-3);">· isteğe bağlı · dikey 9:16 · MP4/MOV · en fazla 50 MB · varsa sitede görsel yerine oynar</span></label><div id="gs_video" style="margin-bottom:8px;"></div><input type="file" id="gs_vdosya" accept="video/mp4,video/quicktime,video/webm" onchange="videoSec(this,'gs')"></div>
+      <div class="field"><label>Galeri <span style="font-weight:400; color:var(--text-3);">· isteğe bağlı · en fazla 12 fotoğraf · sayfada “Galeri” bölümünde görünür</span></label><div id="gs_galeri" style="margin-bottom:8px;"></div><input type="file" id="gs_gdosya" accept="image/jpeg,image/png,image/webp" multiple onchange="galeriSec(this,'gs')"></div>
       <div class="row2">
         <div class="field"><label>Başlangıç</label><input id="gs_baslangic" type="date"></div>
         <div class="field"><label>Bitiş <span style="font-weight:400; color:var(--text-3);">· boşsa süresiz</span></label><input id="gs_bitis" type="date"></div>
@@ -3248,11 +3250,11 @@ function openSiteEtkinlik(id){
   setV("si_bilgi",e.site_bilgiler); setV("si_bilgi_en",e.site_bilgiler_en); setV("si_bilet",e.site_bilet_url);
   setV("si_fiyat",e.site_fiyat); setV("si_fiyat_en",e.site_fiyat_en); setV("si_seans",(e.site_seanslar||[]).join(", ")); setV("si_sure",e.site_sure_dk!=null?String(e.site_sure_dk):"");
   document.getElementById("si_dosya").value="";
-  siteGorselCiz(e.site_gorsel); videoSifirla("si", e.site_video);
+  siteGorselCiz(e.site_gorsel); videoSifirla("si", e.site_video); galeriSifirla("si", e.site_galeri);
   document.getElementById("siteOnizle").href=SITE_URL+"etkinlik.html?id="+encodeURIComponent(e.id);
   document.getElementById("siteOverlay").classList.add("show");
 }
-function closeSiteEtkinlik(){ document.getElementById("siteOverlay").classList.remove("show"); editingSiteId=null; siteGorselYeni=null; document.getElementById("si_video").innerHTML=""; }
+function closeSiteEtkinlik(){ document.getElementById("siteOverlay").classList.remove("show"); editingSiteId=null; siteGorselYeni=null; document.getElementById("si_video").innerHTML=""; galeriBosalt("si"); }
 function siteGorselCiz(url){
   const ok=url && String(url).startsWith(SUPABASE_URL+"/storage/");
   document.getElementById("si_gorsel").innerHTML = ok ? `<img src="${escapeHtml(url)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">` : `<div class="st" style="padding:18px; text-align:center; background:var(--surface-2); border-radius:10px;">Görsel yok</div>`;
@@ -3302,10 +3304,12 @@ async function saveSiteEtkinlik(btn){
     }
     const vd=await videoKaydet("si", "etkinlik/"+e.id, btn);
     if(vd.deger!==undefined) v.site_video=vd.deger;
+    const gl=await galeriKaydet("si", "etkinlik/"+e.id, btn); v.site_galeri=gl.deger;
     btn.textContent="Kaydediliyor…";
     const { error } = await sb.from("etkinlikler").update(v).eq("id",e.id);
     if(error) throw error;
     await eskiMedyaSil(vd.eski, "etkinlik/"+e.id);
+    for(const u of gl.silinen) await eskiMedyaSil(u, "etkinlik/"+e.id);
     // eski görseli kovadan temizle (yalnızca bu etkinliğin klasöründeyse)
     const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
     if(eski && eski.startsWith(onek+"etkinlik/"+e.id+"/")) await sb.storage.from(SITE_BUCKET).remove([eski.slice(onek.length)]);
@@ -3375,14 +3379,14 @@ function openGosterim(id){
   GOS_ALAN.forEach(k=>setV("gs_"+k, g[k]));
   setV("gs_seans",(g.seanslar||[]).join(", ")); setV("gs_sure",g.sure_dk!=null?String(g.sure_dk):""); setV("gs_sira",String(g.sira??0));
   document.getElementById("gs_yayinda").checked=!!g.yayinda; document.getElementById("gs_onecikan").checked=!!g.one_cikan;
-  document.getElementById("gs_dosya").value=""; videoSifirla("gs", g.video);
+  document.getElementById("gs_dosya").value=""; videoSifirla("gs", g.video); galeriSifirla("gs", g.galeri);
   const ok=g.gorsel && String(g.gorsel).startsWith(SUPABASE_URL+"/storage/");
   document.getElementById("gs_gorsel").innerHTML = ok ? `<img src="${escapeHtml(g.gorsel)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">` : `<div class="st" style="padding:18px; text-align:center; background:var(--surface-2); border-radius:10px;">Görsel yok</div>`;
   const on=document.getElementById("gosterimOnizle"); on.style.display = id ? "" : "none"; if(id) on.href=SITE_URL+"gosterim.html?id="+encodeURIComponent(id);
   document.getElementById("gosterimOverlay").classList.add("show");
   if(!id) setTimeout(()=>document.getElementById("gs_baslik").focus(),50);
 }
-function closeGosterim(){ document.getElementById("gosterimOverlay").classList.remove("show"); editingGosterimId=null; gosterimGorselYeni=null; document.getElementById("gs_video").innerHTML=""; }
+function closeGosterim(){ document.getElementById("gosterimOverlay").classList.remove("show"); editingGosterimId=null; gosterimGorselYeni=null; document.getElementById("gs_video").innerHTML=""; galeriBosalt("gs"); }
 async function gosterimGorselSec(inp){
   const f=inp.files[0]; if(!f) return;
   if(!/^image\/(jpeg|png|webp)$/.test(f.type)){ alert("JPG, PNG veya WEBP seçin"); inp.value=""; return; }
@@ -3416,9 +3420,11 @@ async function saveGosterim(btn){
     }
     const vd=await videoKaydet("gs", "gosterim/"+id, btn);
     if(vd.deger!==undefined) v.video=vd.deger;
+    const gl=await galeriKaydet("gs", "gosterim/"+id, btn); v.galeri=gl.deger;
     btn.textContent="Kaydediliyor…";
-    if(editingGosterimId || v.gorsel || vd.deger!==undefined){ const { error } = await sb.from("gosterimler").update(v).eq("id",id); if(error) throw error; }
+    if(editingGosterimId || v.gorsel || vd.deger!==undefined || v.galeri.length){ const { error } = await sb.from("gosterimler").update(v).eq("id",id); if(error) throw error; }
     await eskiMedyaSil(vd.eski, "gosterim/"+id);
+    for(const u of gl.silinen) await eskiMedyaSil(u, "gosterim/"+id);
     const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
     if(eski && eski.startsWith(onek+"gosterim/"+id+"/")) await sb.storage.from(SITE_BUCKET).remove([eski.slice(onek.length)]);
     closeGosterim(); await loadGosterimler(); refreshWebsite(); refreshMenu();
@@ -3431,6 +3437,7 @@ async function deleteGosterim(){
   const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
   if(g.gorsel && g.gorsel.startsWith(onek+"gosterim/"+g.id+"/")) await sb.storage.from(SITE_BUCKET).remove([g.gorsel.slice(onek.length)]);
   await eskiMedyaSil(g.video, "gosterim/"+g.id);
+  for(const u of (g.galeri||[])) await eskiMedyaSil(u, "gosterim/"+g.id);
   const { error } = await sb.from("gosterimler").delete().eq("id",g.id);
   if(error){ alert("Silinemedi: "+error.message); return; }
   closeGosterim(); await loadGosterimler(); refreshWebsite(); refreshMenu();
@@ -3495,6 +3502,56 @@ async function videoKaydet(p, klasor, btn){
 async function eskiMedyaSil(url, klasor){
   const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
   if(url && url.startsWith(onek+klasor+"/")) await sb.storage.from(SITE_BUCKET).remove([url.slice(onek.length)]);
+}
+/* galeri — etkinlik ve gösterim sayfasındaki ek fotoğraflar (sıralanabilir, en fazla 12) */
+const GALERI_MAX = 12;
+const galDurum = { si:{ liste:[], silinen:[] }, gs:{ liste:[], silinen:[] } };
+const GAL_BTN = 'style="width:26px; height:26px; border-radius:50%; border:0; background:rgba(255,255,255,.92); color:#17181C; font-size:16px; line-height:1; cursor:pointer; padding:0;"';
+function galeriSifirla(p, arr){
+  galeriBosalt(p);
+  galDurum[p]={ liste:(arr||[]).filter(u=>String(u).startsWith(SUPABASE_URL+"/storage/") || /^assets\//.test(u)).map(u=>({ url:u })), silinen:[] };
+  document.getElementById(p+"_gdosya").value=""; galeriCiz(p);
+}
+function galeriBosalt(p){ (galDurum[p].liste||[]).forEach(x=>{ if(x.onizleme) URL.revokeObjectURL(x.onizleme); }); galDurum[p]={ liste:[], silinen:[] }; const el=document.getElementById(p+"_galeri"); if(el) el.innerHTML=""; }
+function galeriCiz(p){
+  const d=galDurum[p], el=document.getElementById(p+"_galeri");
+  if(!d.liste.length){ el.innerHTML=`<div class="st" style="padding:14px; text-align:center; background:var(--surface-2); border-radius:10px;">Galeri boş · mekândan, provadan, önceki etkinliklerden fotoğraf ekleyebilirsiniz (birden çok seçilebilir)</div>`; return; }
+  el.innerHTML = `<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(100px,1fr)); gap:8px;">${d.liste.map((x,i)=>`
+    <div style="position:relative; aspect-ratio:1; border-radius:10px; overflow:hidden; background:var(--surface-2);">
+      <img src="${escapeHtml(x.onizleme || (x.url.startsWith("assets/") ? SITE_URL+x.url : x.url))}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;">
+      ${x.blob?`<span style="position:absolute; left:6px; top:6px; font-size:10px; font-weight:600; background:#0A00FF; color:#fff; border-radius:6px; padding:2px 6px;">yeni</span>`:""}
+      <span style="position:absolute; right:6px; top:6px; font-size:10px; font-weight:600; background:rgba(0,0,0,.55); color:#fff; border-radius:6px; padding:2px 6px;">${i+1}</span>
+      <div style="position:absolute; left:0; right:0; bottom:0; display:flex; justify-content:space-between; padding:5px; background:linear-gradient(transparent,rgba(0,0,0,.5));">
+        <button type="button" ${GAL_BTN} title="Öne al" onclick="galeriTasi('${p}',${i},-1)" ${i===0?'disabled style="visibility:hidden"':""}>‹</button>
+        <button type="button" ${GAL_BTN} title="Kaldır" onclick="galeriSil('${p}',${i})">×</button>
+        <button type="button" ${GAL_BTN} title="Sona al" onclick="galeriTasi('${p}',${i},1)" ${i===d.liste.length-1?'disabled style="visibility:hidden"':""}>›</button>
+      </div></div>`).join("")}</div>
+    <div style="margin-top:6px; font-size:12px; color:var(--text-3);">${d.liste.length}/${GALERI_MAX} fotoğraf · ‹ › ile sıralayın · değişiklikler “Kaydet” ile yayına girer</div>`;
+}
+function galeriTasi(p,i,yon){ const l=galDurum[p].liste, j=i+yon; if(j<0||j>=l.length) return; [l[i],l[j]]=[l[j],l[i]]; galeriCiz(p); }
+function galeriSil(p,i){ const d=galDurum[p], [x]=d.liste.splice(i,1); if(x.url) d.silinen.push(x.url); if(x.onizleme) URL.revokeObjectURL(x.onizleme); galeriCiz(p); }
+async function galeriSec(inp, p){
+  const d=galDurum[p], dosyalar=[...inp.files]; inp.value="";
+  const yer=GALERI_MAX-d.liste.length;
+  if(yer<=0){ alert(`Galeride en fazla ${GALERI_MAX} fotoğraf olabilir`); return; }
+  const gecerli=dosyalar.filter(f=>/^image\/(jpeg|png|webp)$/.test(f.type) && f.size<=25*1024*1024);
+  const atlanan=dosyalar.length-gecerli.length, alinan=gecerli.slice(0,yer);
+  const el=document.getElementById(p+"_galeri"); el.insertAdjacentHTML("beforeend", `<div class="st" id="${p}_gdurum" style="margin-top:6px;">Fotoğraflar hazırlanıyor…</div>`);
+  for(const f of alinan){ try{ const blob=await siteGorselKucult(f); d.liste.push({ blob, onizleme:URL.createObjectURL(blob) }); }catch(_){ } }
+  galeriCiz(p);
+  const not=[]; if(atlanan) not.push(`${atlanan} dosya atlandı (yalnızca JPG/PNG/WEBP, 25 MB'a kadar)`); if(gecerli.length>yer) not.push(`${gecerli.length-yer} fotoğraf sığmadı (en fazla ${GALERI_MAX})`);
+  if(not.length) alert(not.join("\n"));
+}
+async function galeriKaydet(p, klasor, btn){
+  const d=galDurum[p], yeni=d.liste.filter(x=>x.blob); let n=0;
+  for(const x of yeni){
+    n++; btn.textContent=`Galeri yükleniyor ${n}/${yeni.length}…`;
+    const yol=`${klasor}/galeri/${Date.now()}-${n}.jpg`;
+    const up=await sb.storage.from(SITE_BUCKET).upload(yol, x.blob, { contentType:"image/jpeg", upsert:false, cacheControl:"31536000" });
+    if(up.error) throw up.error;
+    x.url=sb.storage.from(SITE_BUCKET).getPublicUrl(yol).data.publicUrl; delete x.blob;
+  }
+  return { deger:d.liste.map(x=>x.url), silinen:d.silinen.slice() };
 }
 // Excel, dış formdan gelen "=..." gibi değerleri formül olarak çalıştırmasın
 function csvGuvenli(v){ const s=String(v??""); return /^[=+\-@\t\r]/.test(s) && !/^\+?[\d\s()-]+$/.test(s) ? "'"+s : s; }
