@@ -500,7 +500,7 @@
   <div class="spacer"></div>
   <button class="btn" onclick="katilimCsv()">⬇ CSV</button>
   <button class="btn" onclick="katilimLinkKopyala(this)">🔗 Linki kopyala</button>
-  <a class="btn" href="katil.html" target="_blank" rel="noopener" style="text-decoration:none;">Formu aç ↗</a>
+  <a class="btn" href="https://www.studiohatch.tv/katil.html" target="_blank" rel="noopener" style="text-decoration:none;">Formu aç ↗</a>
 </div>
 
 <div class="toolbar" id="etkinlikToolbar" style="display:none;">
@@ -2864,7 +2864,7 @@ async function loadKatilim(){
 }
 function refreshKatilim(){ if(section==="basvurular") renderKatilim(); }
 function katilimPill(d){ const [bg,fg]=KATILIM_RENK[d]||KATILIM_RENK["Yeni"]; return `<span class="pill" style="background:${bg}; color:${fg};">${escapeHtml(d)}</span>`; }
-function katilimLink(){ return new URL("katil",location.href.split("#")[0].replace(/index\.html$/,"")).href; }
+function katilimLink(){ return SITE_URL+"katil.html"; }
 async function katilimLinkKopyala(btn){
   const eski=btn.textContent;
   try{ await navigator.clipboard.writeText(katilimLink()); btn.textContent="✓ Kopyalandı"; }
