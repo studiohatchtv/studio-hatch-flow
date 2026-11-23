@@ -1072,6 +1072,19 @@
         <div class="field"><label>Bu gösterime özel SSS (TR)</label><textarea id="gs_sss" rows="7" maxlength="8000" style="resize:vertical; line-height:1.5;" placeholder="İlk satır soru, alt satırlar cevap.&#10;Sorular arasında boş satır.&#10;&#10;Gösterim kaç dakika?&#10;Yaklaşık 40 dakika."></textarea></div>
         <div class="field"><label>FAQ for this show (EN)</label><textarea id="gs_sss_en" rows="7" maxlength="8000" style="resize:vertical; line-height:1.5;"></textarea></div>
       </div>
+      <div class="row2">
+        <div class="field"><label>Tür</label><select id="gs_kategori"><option value="immersive">Immersive gösterim (biletli)</option><option value="galeri">Dijital Galeri eseri (ücretsiz)</option></select></div>
+        <div class="field"><label>Sanatçı <span style="font-weight:400; color:var(--text-3);">· Dijital Galeri için</span></label><input id="gs_sanatci" maxlength="120" placeholder="ör. Can Memişoğulları"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Nerede? (TR) <span style="font-weight:400; color:var(--text-3);">· mekândaki yeri</span></label><input id="gs_konum" maxlength="120" placeholder="ör. Giriş fuayesi · HATCH Shop"></div>
+        <div class="field"><label>Where? (EN)</label><input id="gs_konum_en" maxlength="120" placeholder="e.g. Entrance foyer"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Teknik (TR)</label><input id="gs_teknik" maxlength="200" placeholder="ör. Görsel-işitsel yerleştirme · 2024"></div>
+        <div class="field"><label>Medium (EN)</label><input id="gs_teknik_en" maxlength="200" placeholder="e.g. Audiovisual installation · 2024"></div>
+      </div>
+      <div class="field"><label>Sanatçının sitesi <span style="font-weight:400; color:var(--text-3);">· isteğe bağlı</span></label><input id="gs_sanatci_url" maxlength="500" placeholder="https://…"></div>
       <div class="field"><label>Görsel <span style="font-weight:400; color:var(--text-3);">· afiş/kapak, en az 1200px (otomatik küçültülür)</span></label><div id="gs_gorsel" style="margin-bottom:8px;"></div><input type="file" id="gs_dosya" accept="image/jpeg,image/png,image/webp" onchange="gosterimGorselSec(this)"></div>
       <div class="field"><label>Story video <span style="font-weight:400; color:var(--text-3);">· isteğe bağlı · dikey 9:16 · MP4/MOV · en fazla 50 MB · varsa sitede görsel yerine oynar</span></label><div id="gs_video" style="margin-bottom:8px;"></div><input type="file" id="gs_vdosya" accept="video/mp4,video/quicktime,video/webm" onchange="videoSec(this,'gs')"></div>
       <div class="field"><label>Galeri <span style="font-weight:400; color:var(--text-3);">· isteğe bağlı · en fazla 12 fotoğraf · sayfada “Galeri” bölümünde görünür</span></label><div id="gs_galeri" style="margin-bottom:8px;"></div><input type="file" id="gs_gdosya" accept="image/jpeg,image/png,image/webp" multiple onchange="galeriSec(this,'gs')"></div>
@@ -3359,8 +3372,8 @@ function gosterimDurum(g){
 function renderGosterimler(board){
   const rows=gosterimler.length?gosterimler.map(g=>{ const [d,bg,fg]=gosterimDurum(g);
     return `<tr onclick="openGosterim('${g.id}')">
-      <td>${g.gorsel?`<img class="mg-thumb" src="${escapeHtml(g.gorsel)}" alt="">`:`<span class="st">—</span>`}</td>
-      <td><b>${escapeHtml(g.baslik)}</b>${g.one_cikan?" ⭐":""}${g.video?` <span class="rh-tag">▶ video</span>`:""}<div class="st">${escapeHtml(g.alt_baslik||"")}</div></td>
+      <td>${g.gorsel?`<img class="mg-thumb" src="${escapeHtml(String(g.gorsel).startsWith("assets/")?SITE_URL+g.gorsel:g.gorsel)}" alt="">`:`<span class="st">—</span>`}</td>
+      <td><b>${escapeHtml(g.baslik)}</b>${g.one_cikan?" ⭐":""}${g.kategori==="galeri"?` <span class="rh-tag">🎨 Dijital Galeri · ücretsiz</span>`:""}${g.video?` <span class="rh-tag">▶ video</span>`:""}<div class="st">${escapeHtml(g.alt_baslik||"")}</div></td>
       <td class="hide-m st" style="white-space:nowrap;">${g.baslangic?fmtFull(g.baslangic):"—"} → ${g.bitis?fmtFull(g.bitis):"…"}</td>
       <td class="hide-m st">${(g.seanslar||[]).join(" · ")||escapeHtml(g.saatler||"")||"—"}</td>
       <td><span class="pill" style="background:${bg}; color:${fg};">${d}</span></td></tr>`; }).join("")
@@ -3374,7 +3387,7 @@ function renderGosterimler(board){
     <div class="mg-scroll"><table class="list"><thead><tr><th style="width:56px;"></th><th>Gösterim</th><th class="hide-m">Tarihler</th><th class="hide-m">Seanslar</th><th>Site</th></tr></thead><tbody>${rows}</tbody></table></div>
   </div>`;
 }
-const GOS_ALAN = ["baslik","baslik_en","alt_baslik","alt_baslik_en","ozet","ozet_en","aciklama","aciklama_en","nedir","nedir_en","ne_degildir","ne_degildir_en","sss","sss_en","baslangic","bitis","saatler","saatler_en","yas","yas_en","fiyat","fiyat_en","bilet_url"];
+const GOS_ALAN = ["baslik","baslik_en","alt_baslik","alt_baslik_en","ozet","ozet_en","aciklama","aciklama_en","nedir","nedir_en","ne_degildir","ne_degildir_en","sss","sss_en","baslangic","bitis","saatler","saatler_en","yas","yas_en","fiyat","fiyat_en","bilet_url","sanatci","sanatci_url","konum","konum_en","teknik","teknik_en"];
 function openGosterim(id){
   const g = id ? gosterimler.find(x=>x.id===id) : { yayinda:false, one_cikan:false, sira:(gosterimler.length+1)*10, seanslar:[] };
   if(!g) return;
@@ -3382,11 +3395,12 @@ function openGosterim(id){
   document.getElementById("gosterimModalTitle").textContent = id ? g.baslik : "Yeni gösterim";
   document.getElementById("gosterimDeleteBtn").style.display = id ? "inline" : "none";
   GOS_ALAN.forEach(k=>setV("gs_"+k, g[k]));
+  document.getElementById("gs_kategori").value = g.kategori==="galeri" ? "galeri" : "immersive";
   setV("gs_seans",(g.seanslar||[]).join(", ")); setV("gs_sure",g.sure_dk!=null?String(g.sure_dk):""); setV("gs_sira",String(g.sira??0));
   document.getElementById("gs_yayinda").checked=!!g.yayinda; document.getElementById("gs_onecikan").checked=!!g.one_cikan;
   document.getElementById("gs_dosya").value=""; videoSifirla("gs", g.video); galeriSifirla("gs", g.galeri);
-  const ok=g.gorsel && String(g.gorsel).startsWith(SUPABASE_URL+"/storage/");
-  document.getElementById("gs_gorsel").innerHTML = ok ? `<img src="${escapeHtml(g.gorsel)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">` : `<div class="st" style="padding:18px; text-align:center; background:var(--surface-2); border-radius:10px;">Görsel yok</div>`;
+  const ok=g.gorsel && (String(g.gorsel).startsWith(SUPABASE_URL+"/storage/") || String(g.gorsel).startsWith("assets/"));
+  document.getElementById("gs_gorsel").innerHTML = ok ? `<img src="${escapeHtml(String(g.gorsel).startsWith("assets/")?SITE_URL+g.gorsel:g.gorsel)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">` : `<div class="st" style="padding:18px; text-align:center; background:var(--surface-2); border-radius:10px;">Görsel yok</div>`;
   const on=document.getElementById("gosterimOnizle"); on.style.display = id ? "" : "none"; if(id) on.href=SITE_URL+"gosterim.html?id="+encodeURIComponent(id);
   document.getElementById("gosterimOverlay").classList.add("show");
   if(!id) setTimeout(()=>document.getElementById("gs_baslik").focus(),50);
@@ -3404,6 +3418,8 @@ async function saveGosterim(btn){
   const v={}; GOS_ALAN.forEach(k=>{ v[k]=g("gs_"+k)||null; });
   if(!v.baslik){ alert("Gösterim adı gerekli"); return; }
   if(v.bilet_url && !/^https:\/\/\S+$/i.test(v.bilet_url)){ alert("Bilet linki https:// ile başlamalı"); return; }
+  if(v.sanatci_url && !/^https:\/\/\S+$/i.test(v.sanatci_url)){ alert("Sanatçının sitesi https:// ile başlamalı"); return; }
+  v.kategori = document.getElementById("gs_kategori").value==="galeri" ? "galeri" : "immersive";
   if(v.baslangic && v.bitis && v.bitis<v.baslangic){ alert("Bitiş tarihi başlangıçtan önce olamaz"); return; }
   const seans=g("gs_seans").split(/[,\s]+/).filter(Boolean);
   if(seans.some(s=>!/^([01]?\d|2[0-3])[:.][0-5]\d$/.test(s))){ alert("Seansları 11:00, 13:30 biçiminde yazın"); return; }
