@@ -303,6 +303,7 @@
   .mg-close { display: none; }
   .pill { font-size: 11px; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
   .stats.five { grid-template-columns: repeat(5, 1fr); }
+  .stats.six { grid-template-columns: repeat(6, 1fr); }
   .mg-thumb { width: 42px; height: 42px; border-radius: 6px; object-fit: cover; background: var(--surface-2); display: block; }
   .mg-warn { font-size: 12px; color: #854F0B; background: #FAEEDA; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
   .num { text-align: right; white-space: nowrap; }
@@ -319,7 +320,7 @@
       justify-content: space-between; box-shadow: 0 6px 20px rgba(0,0,0,.25); font-family: inherit; }
     .mg-pad { height: 80px; }
     .mg-close { display: inline; }
-    .stats.five { grid-template-columns: repeat(2, 1fr); }
+    .stats.five, .stats.six { grid-template-columns: repeat(2, 1fr); }
   }
   .card .meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
   .avatars { display: flex; }
@@ -2850,7 +2851,7 @@ function fillKontakSelects(){
 }
 
 /* başvurular ("Hatch'e Katıl" formu; Dijital Art'ın basvurular tablosundan ayrı) */
-const KATILIM_TUR = ["Tasarımcı & Marka","Atölye","Etkinlik & İş Birliği"];
+const KATILIM_TUR = ["Tasarımcı & Marka","Atölye","Etkinlik & İş Birliği","HATCH Up · Pop-Up"];
 const KATILIM_DURUM = ["Yeni","İletişime geçildi","Seçildi","Reddedildi"];
 const KATILIM_RENK = { "Yeni":["#fceeee","#c0392b"], "İletişime geçildi":["#E6F1FB","#185FA5"], "Seçildi":["#E1F5EE","#0F6E56"], "Reddedildi":["#f1efe8","#6b6a62"] };
 let katilimlar = [], katilimHata = "";
@@ -2876,12 +2877,13 @@ function renderKatilim(){
   const yeni=katilimlar.filter(b=>b.durum==="Yeni").length;
   board.innerHTML=`<div class="listwrap">
     ${katilimHata?`<div class="mg-warn">Başvurular yüklenemedi. Supabase SQL Editor'de <b>update-katilim.sql</b> dosyasını çalıştırın.</div>`:""}
-    <div class="stats five">
+    <div class="stats five six">
       <div class="stat"><span class="n">${katilimlar.length}</span><span class="l">Toplam</span></div>
       <div class="stat ${yeni?"danger":""}"><span class="n">${yeni}</span><span class="l">Yeni</span></div>
       <div class="stat"><span class="n">${say(KATILIM_TUR[0])}</span><span class="l">Tasarımcı</span></div>
       <div class="stat"><span class="n">${say(KATILIM_TUR[1])}</span><span class="l">Atölye</span></div>
       <div class="stat"><span class="n">${say(KATILIM_TUR[2])}</span><span class="l">Etkinlik</span></div>
+      <div class="stat" style="cursor:pointer;" onclick="katilimTur=KATILIM_TUR[3]; renderKatilim()"><span class="n" style="color:#C8102E;">${say(KATILIM_TUR[3])}</span><span class="l">HATCH Up</span></div>
     </div>
     <div class="mg-filters">
       <input placeholder="Ad, e-posta, telefon ara…" value="${escapeHtml(katilimSearch)}" oninput="katilimSearch=this.value; renderKatilimTable()">
@@ -2898,7 +2900,7 @@ function renderKatilimTable(){
   const list=katilimlar.filter(b=>(!katilimTur||b.tur===katilimTur)&&(!katilimDurum||b.durum===katilimDurum)&&(!q||[b.ad,b.email,b.telefon].filter(Boolean).join(" ").toLocaleLowerCase("tr").includes(q)));
   const rows=list.length?list.map(b=>`<tr onclick="openKatilim('${b.id}')">
       <td><b>${escapeHtml(b.ad)}</b><div class="st">${escapeHtml(b.email)}</div></td>
-      <td class="st">${escapeHtml(b.tur)}</td>
+      <td class="st">${escapeHtml(b.tur)}${b.tur===KATILIM_TUR[3]?`<div style="color:#C8102E; font-weight:600;">${escapeHtml(((b.alanlar||[]).find(a=>a.etiket==="Katılım alanı")||{}).deger||"")}</div>`:""}</td>
       <td class="st hide-m">${escapeHtml(b.telefon||"")}</td>
       <td>${katilimPill(b.durum)}</td>
       <td class="st hide-m" style="white-space:nowrap;">${fmtFull(localKey(b.created_at))}</td>
