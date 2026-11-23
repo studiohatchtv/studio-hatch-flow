@@ -1015,6 +1015,7 @@
         <div class="field"><label>Bilmen gerekenler (EN)</label><textarea id="si_bilgi_en" rows="3" maxlength="1000" style="resize:vertical; line-height:1.5;"></textarea></div>
       </div>
       <div class="field"><label>Görsel <span style="font-weight:400; color:var(--text-3);">· yatay, en az 1200px (otomatik küçültülür)</span></label><div id="si_gorsel" style="margin-bottom:8px;"></div><input type="file" id="si_dosya" accept="image/jpeg,image/png,image/webp" onchange="siteGorselSec(this)"></div>
+      <div class="field"><label>Story video <span style="font-weight:400; color:var(--text-3);">· isteğe bağlı · dikey 9:16 · MP4/MOV · en fazla 50 MB · varsa sitede görsel yerine oynar</span></label><div id="si_video" style="margin-bottom:8px;"></div><input type="file" id="si_vdosya" accept="video/mp4,video/quicktime,video/webm" onchange="videoSec(this,'si')"></div>
       <div class="field"><label>Bilet linki (Passo)</label><input id="si_bilet" maxlength="500" placeholder="https://www.passo.com.tr/…  (boşsa “kayıt gerekmez”)"></div>
       <div class="row2">
         <div class="field"><label>Fiyat (TR)</label><input id="si_fiyat" maxlength="60" placeholder="ör. 350 ₺ · Passo'da · Ücretsiz"></div>
@@ -1070,6 +1071,7 @@
         <div class="field"><label>FAQ for this show (EN)</label><textarea id="gs_sss_en" rows="7" maxlength="8000" style="resize:vertical; line-height:1.5;"></textarea></div>
       </div>
       <div class="field"><label>Görsel <span style="font-weight:400; color:var(--text-3);">· afiş/kapak, en az 1200px (otomatik küçültülür)</span></label><div id="gs_gorsel" style="margin-bottom:8px;"></div><input type="file" id="gs_dosya" accept="image/jpeg,image/png,image/webp" onchange="gosterimGorselSec(this)"></div>
+      <div class="field"><label>Story video <span style="font-weight:400; color:var(--text-3);">· isteğe bağlı · dikey 9:16 · MP4/MOV · en fazla 50 MB · varsa sitede görsel yerine oynar</span></label><div id="gs_video" style="margin-bottom:8px;"></div><input type="file" id="gs_vdosya" accept="video/mp4,video/quicktime,video/webm" onchange="videoSec(this,'gs')"></div>
       <div class="row2">
         <div class="field"><label>Başlangıç</label><input id="gs_baslangic" type="date"></div>
         <div class="field"><label>Bitiş <span style="font-weight:400; color:var(--text-3);">· boşsa süresiz</span></label><input id="gs_bitis" type="date"></div>
@@ -3246,11 +3248,11 @@ function openSiteEtkinlik(id){
   setV("si_bilgi",e.site_bilgiler); setV("si_bilgi_en",e.site_bilgiler_en); setV("si_bilet",e.site_bilet_url);
   setV("si_fiyat",e.site_fiyat); setV("si_fiyat_en",e.site_fiyat_en); setV("si_seans",(e.site_seanslar||[]).join(", ")); setV("si_sure",e.site_sure_dk!=null?String(e.site_sure_dk):"");
   document.getElementById("si_dosya").value="";
-  siteGorselCiz(e.site_gorsel);
+  siteGorselCiz(e.site_gorsel); videoSifirla("si", e.site_video);
   document.getElementById("siteOnizle").href=SITE_URL+"etkinlik.html?id="+encodeURIComponent(e.id);
   document.getElementById("siteOverlay").classList.add("show");
 }
-function closeSiteEtkinlik(){ document.getElementById("siteOverlay").classList.remove("show"); editingSiteId=null; siteGorselYeni=null; }
+function closeSiteEtkinlik(){ document.getElementById("siteOverlay").classList.remove("show"); editingSiteId=null; siteGorselYeni=null; document.getElementById("si_video").innerHTML=""; }
 function siteGorselCiz(url){
   const ok=url && String(url).startsWith(SUPABASE_URL+"/storage/");
   document.getElementById("si_gorsel").innerHTML = ok ? `<img src="${escapeHtml(url)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">` : `<div class="st" style="padding:18px; text-align:center; background:var(--surface-2); border-radius:10px;">Görsel yok</div>`;
@@ -3298,8 +3300,12 @@ async function saveSiteEtkinlik(btn){
       v.site_gorsel=sb.storage.from(SITE_BUCKET).getPublicUrl(yol).data.publicUrl;
       eski=e.site_gorsel;
     }
+    const vd=await videoKaydet("si", "etkinlik/"+e.id, btn);
+    if(vd.deger!==undefined) v.site_video=vd.deger;
+    btn.textContent="Kaydediliyor…";
     const { error } = await sb.from("etkinlikler").update(v).eq("id",e.id);
     if(error) throw error;
+    await eskiMedyaSil(vd.eski, "etkinlik/"+e.id);
     // eski görseli kovadan temizle (yalnızca bu etkinliğin klasöründeyse)
     const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
     if(eski && eski.startsWith(onek+"etkinlik/"+e.id+"/")) await sb.storage.from(SITE_BUCKET).remove([eski.slice(onek.length)]);
@@ -3345,7 +3351,7 @@ function renderGosterimler(board){
   const rows=gosterimler.length?gosterimler.map(g=>{ const [d,bg,fg]=gosterimDurum(g);
     return `<tr onclick="openGosterim('${g.id}')">
       <td>${g.gorsel?`<img class="mg-thumb" src="${escapeHtml(g.gorsel)}" alt="">`:`<span class="st">—</span>`}</td>
-      <td><b>${escapeHtml(g.baslik)}</b>${g.one_cikan?" ⭐":""}<div class="st">${escapeHtml(g.alt_baslik||"")}</div></td>
+      <td><b>${escapeHtml(g.baslik)}</b>${g.one_cikan?" ⭐":""}${g.video?` <span class="rh-tag">▶ video</span>`:""}<div class="st">${escapeHtml(g.alt_baslik||"")}</div></td>
       <td class="hide-m st" style="white-space:nowrap;">${g.baslangic?fmtFull(g.baslangic):"—"} → ${g.bitis?fmtFull(g.bitis):"…"}</td>
       <td class="hide-m st">${(g.seanslar||[]).join(" · ")||escapeHtml(g.saatler||"")||"—"}</td>
       <td><span class="pill" style="background:${bg}; color:${fg};">${d}</span></td></tr>`; }).join("")
@@ -3369,14 +3375,14 @@ function openGosterim(id){
   GOS_ALAN.forEach(k=>setV("gs_"+k, g[k]));
   setV("gs_seans",(g.seanslar||[]).join(", ")); setV("gs_sure",g.sure_dk!=null?String(g.sure_dk):""); setV("gs_sira",String(g.sira??0));
   document.getElementById("gs_yayinda").checked=!!g.yayinda; document.getElementById("gs_onecikan").checked=!!g.one_cikan;
-  document.getElementById("gs_dosya").value="";
+  document.getElementById("gs_dosya").value=""; videoSifirla("gs", g.video);
   const ok=g.gorsel && String(g.gorsel).startsWith(SUPABASE_URL+"/storage/");
   document.getElementById("gs_gorsel").innerHTML = ok ? `<img src="${escapeHtml(g.gorsel)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">` : `<div class="st" style="padding:18px; text-align:center; background:var(--surface-2); border-radius:10px;">Görsel yok</div>`;
   const on=document.getElementById("gosterimOnizle"); on.style.display = id ? "" : "none"; if(id) on.href=SITE_URL+"gosterim.html?id="+encodeURIComponent(id);
   document.getElementById("gosterimOverlay").classList.add("show");
   if(!id) setTimeout(()=>document.getElementById("gs_baslik").focus(),50);
 }
-function closeGosterim(){ document.getElementById("gosterimOverlay").classList.remove("show"); editingGosterimId=null; gosterimGorselYeni=null; }
+function closeGosterim(){ document.getElementById("gosterimOverlay").classList.remove("show"); editingGosterimId=null; gosterimGorselYeni=null; document.getElementById("gs_video").innerHTML=""; }
 async function gosterimGorselSec(inp){
   const f=inp.files[0]; if(!f) return;
   if(!/^image\/(jpeg|png|webp)$/.test(f.type)){ alert("JPG, PNG veya WEBP seçin"); inp.value=""; return; }
@@ -3408,7 +3414,11 @@ async function saveGosterim(btn){
       eski=(gosterimler.find(x=>x.id===id)||{}).gorsel;
       v.gorsel=sb.storage.from(SITE_BUCKET).getPublicUrl(yol).data.publicUrl;
     }
-    if(editingGosterimId || v.gorsel){ const { error } = await sb.from("gosterimler").update(v).eq("id",id); if(error) throw error; }
+    const vd=await videoKaydet("gs", "gosterim/"+id, btn);
+    if(vd.deger!==undefined) v.video=vd.deger;
+    btn.textContent="Kaydediliyor…";
+    if(editingGosterimId || v.gorsel || vd.deger!==undefined){ const { error } = await sb.from("gosterimler").update(v).eq("id",id); if(error) throw error; }
+    await eskiMedyaSil(vd.eski, "gosterim/"+id);
     const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
     if(eski && eski.startsWith(onek+"gosterim/"+id+"/")) await sb.storage.from(SITE_BUCKET).remove([eski.slice(onek.length)]);
     closeGosterim(); await loadGosterimler(); refreshWebsite(); refreshMenu();
@@ -3420,9 +3430,71 @@ async function deleteGosterim(){
   if(!confirm(`“${g.baslik}” ve görseli kalıcı olarak silinsin mi?\nSadece siteden kaldırmak için “Sitede yayınla”yı kapatmanız yeterli.`)) return;
   const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
   if(g.gorsel && g.gorsel.startsWith(onek+"gosterim/"+g.id+"/")) await sb.storage.from(SITE_BUCKET).remove([g.gorsel.slice(onek.length)]);
+  await eskiMedyaSil(g.video, "gosterim/"+g.id);
   const { error } = await sb.from("gosterimler").delete().eq("id",g.id);
   if(error){ alert("Silinemedi: "+error.message); return; }
   closeGosterim(); await loadGosterimler(); refreshWebsite(); refreshMenu();
+}
+/* story video (dikey) — etkinlik ve gösterim pencerelerinde ortak */
+const VIDEO_MAX_MB = 50;
+const vidDurum = { si:{ yeni:null, sil:false, mevcut:null }, gs:{ yeni:null, sil:false, mevcut:null } };
+function videoSifirla(p, url){ vidDurum[p]={ yeni:null, sil:false, mevcut: url && (String(url).startsWith(SUPABASE_URL+"/storage/") || /^assets\/video\//.test(url)) ? url : null }; document.getElementById(p+"_vdosya").value=""; videoCiz(p); }
+function videoCiz(p){
+  const d=vidDurum[p], el=document.getElementById(p+"_video");
+  const src = d.yeni ? URL.createObjectURL(d.yeni) : (!d.sil && d.mevcut ? (d.mevcut.startsWith("assets/") ? SITE_URL+d.mevcut : d.mevcut) : null);
+  el.innerHTML = src
+    ? `<div style="display:flex; gap:12px; align-items:flex-start;"><video src="${escapeHtml(src)}" muted loop playsinline autoplay style="width:120px; aspect-ratio:9/16; object-fit:cover; border-radius:12px; background:#000; flex:none;"></video>
+       <div style="font-size:13px; color:var(--text-2); line-height:1.5;">${d.yeni?`<b>${escapeHtml(d.yeni.name)}</b><br>${(d.yeni.size/1048576).toFixed(1)} MB · kaydedince yüklenecek`:"Sitede yayında"}<br>
+       <button type="button" class="link-danger" style="margin-top:8px;" onclick="videoKaldir('${p}')">Videoyu kaldır</button></div></div>`
+    : `<div class="st" style="padding:14px; text-align:center; background:var(--surface-2); border-radius:10px;">Video yok · dikey (9:16) story videosu ekleyebilirsiniz</div>`;
+}
+function videoKaldir(p){ const d=vidDurum[p]; d.yeni=null; d.sil=true; document.getElementById(p+"_vdosya").value=""; videoCiz(p); }
+// videonun ölçüsünü/süresini okur, istenirse ilk saniyeden kapak görseli üretir
+function videoBilgi(file, kapak){
+  return new Promise((res,rej)=>{
+    const v=document.createElement("video"); const u=URL.createObjectURL(file);
+    v.muted=true; v.playsInline=true; v.preload="auto"; v.src=u;
+    v.onloadedmetadata=()=>{ if(!kapak){ URL.revokeObjectURL(u); return res({ w:v.videoWidth, h:v.videoHeight, sure:v.duration }); } v.currentTime=Math.min(0.6, (v.duration||1)/2); };
+    v.onseeked=()=>{ const max=1200, r=Math.min(1,max/Math.max(v.videoWidth,v.videoHeight));
+      const c=document.createElement("canvas"); c.width=Math.round(v.videoWidth*r); c.height=Math.round(v.videoHeight*r);
+      c.getContext("2d").drawImage(v,0,0,c.width,c.height); URL.revokeObjectURL(u);
+      c.toBlob(b=>res({ w:v.videoWidth, h:v.videoHeight, sure:v.duration, kapak:b }),"image/jpeg",0.84); };
+    v.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error("Video okunamadı. MP4 (H.264) olarak dışa aktarıp tekrar deneyin.")); };
+  });
+}
+async function videoSec(inp, p){
+  const f=inp.files[0]; if(!f) return;
+  if(!/^video\/(mp4|quicktime|webm)$/.test(f.type)){ alert("MP4, MOV veya WEBM video seçin"); inp.value=""; return; }
+  if(f.size>VIDEO_MAX_MB*1024*1024){ alert(`Video ${VIDEO_MAX_MB} MB'tan küçük olmalı (bu dosya ${(f.size/1048576).toFixed(0)} MB).\nInstagram'dan indirilen story videoları genelde uygundur; değilse telefondan daha düşük kalitede dışa aktarın.`); inp.value=""; return; }
+  const gorselVar = p==="si" ? (siteGorselYeni || (etkinlikler.find(x=>x.id===editingSiteId)||{}).site_gorsel) : (gosterimGorselYeni || (gosterimler.find(x=>x.id===editingGosterimId)||{}).gorsel);
+  try{
+    const b=await videoBilgi(f, !gorselVar);
+    if(b.w>b.h && !confirm("Bu video yatay. Sitede dikey (story) alanda kırpılarak görünecek. Yine de kullanılsın mı?")){ inp.value=""; return; }
+    if(b.sure>90) alert("Not: Video "+Math.round(b.sure)+" saniye. Sitede en iyi 15–60 saniyelik videolar çalışır.");
+    vidDurum[p].yeni=f; vidDurum[p].sil=false; videoCiz(p);
+    if(b.kapak){ // görsel yoksa kapak videodan
+      if(p==="si"){ siteGorselYeni=b.kapak; document.getElementById("si_gorsel").innerHTML=`<img src="${URL.createObjectURL(b.kapak)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;"><div class="st" style="margin-top:4px;">Kapak videodan alındı</div>`; }
+      else { gosterimGorselYeni=b.kapak; document.getElementById("gs_gorsel").innerHTML=`<img src="${URL.createObjectURL(b.kapak)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;"><div class="st" style="margin-top:4px;">Kapak videodan alındı</div>`; }
+    }
+  }catch(err){ alert(err.message); inp.value=""; }
+}
+// kaydederken: yeni videoyu yükler / kaldırılanı siler. Dönen değer: { deger (url|null|undefined=değişmedi), eski }
+async function videoKaydet(p, klasor, btn){
+  const d=vidDurum[p];
+  if(d.yeni){
+    if(btn) btn.textContent="Video yükleniyor…";
+    const uz=(d.yeni.type==="video/quicktime")?"mov":d.yeni.type==="video/webm"?"webm":"mp4";
+    const yol=`${klasor}/video-${Date.now()}.${uz}`;
+    const up=await sb.storage.from(SITE_BUCKET).upload(yol, d.yeni, { contentType:d.yeni.type, upsert:false, cacheControl:"31536000" });
+    if(up.error) throw new Error("Video yüklenemedi: "+up.error.message);
+    return { deger: sb.storage.from(SITE_BUCKET).getPublicUrl(yol).data.publicUrl, eski:d.mevcut };
+  }
+  if(d.sil) return { deger:null, eski:d.mevcut };
+  return { deger:undefined, eski:null };
+}
+async function eskiMedyaSil(url, klasor){
+  const onek=SUPABASE_URL+"/storage/v1/object/public/"+SITE_BUCKET+"/";
+  if(url && url.startsWith(onek+klasor+"/")) await sb.storage.from(SITE_BUCKET).remove([url.slice(onek.length)]);
 }
 // Excel, dış formdan gelen "=..." gibi değerleri formül olarak çalıştırmasın
 function csvGuvenli(v){ const s=String(v??""); return /^[=+\-@\t\r]/.test(s) && !/^\+?[\d\s()-]+$/.test(s) ? "'"+s : s; }
