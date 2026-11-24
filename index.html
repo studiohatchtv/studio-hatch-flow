@@ -996,6 +996,7 @@
       <div class="field" style="display:flex; gap:18px; flex-wrap:wrap;">
         <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:var(--text); cursor:pointer;"><input type="checkbox" id="si_yayinda" style="width:auto;"> Sitede yayınla</label>
         <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); cursor:pointer;"><input type="checkbox" id="si_onecikan" style="width:auto;"> ⭐ Ana sayfada öne çıkar</label>
+        <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:var(--text); cursor:pointer;"><input type="checkbox" id="si_tukendi" style="width:auto;"> 🔴 Tükendi (Sold Out)</label>
       </div>
       <div class="field"><label>Program (sitedeki renk)</label><select id="si_program"><option value="culture">Immersive Gösteri (mavi)</option><option value="wellness">Wellness (yeşil)</option><option value="nocturne">Atölye & Buluşma (koyu)</option></select></div>
       <div class="row2">
@@ -3218,7 +3219,7 @@ function renderWebsite(){
   const rows=list.length?list.map(e=>{ const [d,bg,fg]=siteDurum(e); const p=SITE_PROGRAM[e.site_program]||SITE_PROGRAM.culture;
     return `<tr onclick="openSiteEtkinlik('${e.id}')">
       <td style="white-space:nowrap;"><b>${fmtFull(e.tarih)}</b><div class="st">${etSaatYazi(e)}</div></td>
-      <td><b>${escapeHtml(e.baslik)}</b>${e.site_one_cikan?` <span title="Ana sayfada öne çıkan">⭐</span>`:""}<div class="st">${escapeHtml(e.tur)} · takvimde ${escapeHtml(e.durum)}</div></td>
+      <td><b>${escapeHtml(e.baslik)}</b>${e.site_one_cikan?` <span title="Ana sayfada öne çıkan">⭐</span>`:""}${e.site_tukendi?` <span title="Tükendi">🔴</span>`:""}<div class="st">${escapeHtml(e.tur)} · takvimde ${escapeHtml(e.durum)}</div></td>
       <td class="hide-m"><span class="pill" style="background:${p[2]}; color:${p[1]};">${p[0]}</span></td>
       <td class="hide-m">${e.site_gorsel?`<img class="mg-thumb" src="${escapeHtml(e.site_gorsel)}" alt="">`:`<span class="st">—</span>`}</td>
       <td><span class="pill" style="background:${bg}; color:${fg};">${d}</span></td></tr>`; }).join("")
@@ -3262,6 +3263,7 @@ function openSiteEtkinlik(id){
   document.getElementById("siteOzetTakvim").textContent=`${fmtFull(e.tarih)}${e.bitis_tarih?" → "+fmtFull(e.bitis_tarih):""} · ${etSaatYazi(e)} · ${e.tur}`;
   document.getElementById("si_yayinda").checked=!!e.site_yayinda;
   document.getElementById("si_onecikan").checked=!!e.site_one_cikan;
+  document.getElementById("si_tukendi").checked=!!e.site_tukendi;
   document.getElementById("si_program").value=e.site_program||"culture";
   setV("si_baslik_tr",e.baslik); setV("si_baslik_en",e.site_baslik_en); setV("si_tur_en",e.site_tur_en);
   setV("si_ozet",e.site_ozet); setV("si_ozet_en",e.site_ozet_en); setV("si_aciklama",e.site_aciklama); setV("si_aciklama_en",e.site_aciklama_en);
@@ -3309,6 +3311,7 @@ async function saveSiteEtkinlik(btn){
     site_aciklama:g("si_aciklama")||null, site_aciklama_en:g("si_aciklama_en")||null, site_bilgiler:g("si_bilgi")||null, site_bilgiler_en:g("si_bilgi_en")||null,
     site_bilet_url:bilet||null, site_fiyat:g("si_fiyat")||null, site_fiyat_en:g("si_fiyat_en")||null,
     site_seanslar:seans.map(s=>s.replace(".",":").padStart(5,"0")), site_sure_dk:Number.isFinite(sure)&&sure>0?sure:null };
+  if("site_tukendi" in e) v.site_tukendi=document.getElementById("si_tukendi").checked;
   if(v.site_yayinda && !v.site_ozet){ alert("Yayına almak için en azından kısa tanıtım (TR) yazın"); return; }
   btn.disabled=true; btn.textContent="Kaydediliyor…";
   try{
