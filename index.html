@@ -3221,7 +3221,7 @@ function renderWebsite(){
       <td style="white-space:nowrap;"><b>${fmtFull(e.tarih)}</b><div class="st">${etSaatYazi(e)}</div></td>
       <td><b>${escapeHtml(e.baslik)}</b>${e.site_one_cikan?` <span title="Ana sayfada öne çıkan">⭐</span>`:""}${e.site_tukendi?` <span title="Tükendi">🔴</span>`:""}<div class="st">${escapeHtml(e.tur)} · takvimde ${escapeHtml(e.durum)}</div></td>
       <td class="hide-m"><span class="pill" style="background:${p[2]}; color:${p[1]};">${p[0]}</span></td>
-      <td class="hide-m">${e.site_gorsel?`<img class="mg-thumb" src="${escapeHtml(e.site_gorsel)}" alt="">`:`<span class="st">—</span>`}</td>
+      <td class="hide-m">${e.site_gorsel?`<img class="mg-thumb" src="${escapeHtml(String(e.site_gorsel).startsWith("assets/")?SITE_URL+e.site_gorsel:e.site_gorsel)}" alt="">`:`<span class="st">—</span>`}</td>
       <td><span class="pill" style="background:${bg}; color:${fg};">${d}</span></td></tr>`; }).join("")
     : `<tr><td colspan="5"><div class="list-empty">Yaklaşan etkinlik yok. Önce 📅 Etkinlik Takvimi'ne ekleyin.</div></td></tr>`;
   board.innerHTML=`<div class="listwrap">${hata}
@@ -3276,8 +3276,8 @@ function openSiteEtkinlik(id){
 }
 function closeSiteEtkinlik(){ document.getElementById("siteOverlay").classList.remove("show"); editingSiteId=null; siteGorselYeni=null; document.getElementById("si_video").innerHTML=""; galeriBosalt("si"); }
 function siteGorselCiz(url){
-  const ok=url && String(url).startsWith(SUPABASE_URL+"/storage/");
-  document.getElementById("si_gorsel").innerHTML = ok ? `<img src="${escapeHtml(url)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">` : `<div class="st" style="padding:18px; text-align:center; background:var(--surface-2); border-radius:10px;">Görsel yok</div>`;
+  const ok=url && (String(url).startsWith(SUPABASE_URL+"/storage/") || String(url).startsWith("assets/"));
+  document.getElementById("si_gorsel").innerHTML = ok ? `<img src="${escapeHtml(String(url).startsWith("assets/")?SITE_URL+url:url)}" alt="" style="width:100%; max-height:220px; object-fit:cover; border-radius:10px; display:block;">` : `<div class="st" style="padding:18px; text-align:center; background:var(--surface-2); border-radius:10px;">Görsel yok</div>`;
 }
 // görseli tarayıcıda 1600px'e küçültüp JPEG yapar (site hızlı açılsın)
 function siteGorselKucult(file){
